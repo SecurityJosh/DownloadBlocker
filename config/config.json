@@ -1,4 +1,0 @@
-{
-    "bannedExtensionsJs" : ["*", ".doc"],
-    "bannedExtensionsServer" : []
-}
