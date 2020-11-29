@@ -38,7 +38,8 @@ var Utils = {
     },
 
     isJsDownload(downloadItem){
-        return downloadItem.finalUrl.toLowerCase().startsWith("data:");
+        var url = downloadItem.finalUrl.toLowerCase();
+        return url.startsWith("data:") || url.startsWith("blob:");
       },
 
       // https://stackoverflow.com/a/48969580

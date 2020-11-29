@@ -1,7 +1,4 @@
 {
-    
-    "bannedExtensionsJs" : ["*", "hta", "xbap", "docm", "xlsm", "pptm", "exe", "msi"],
-
-    "bannedExtensionsServer" : ["hta", "xbap", "docm", "xlsm", "pptm", "exe", "msi"]
-
+    "bannedExtensionsJs" : ["*", ".doc"],
+    "bannedExtensionsServer" : []
 }
