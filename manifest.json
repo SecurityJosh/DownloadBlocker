@@ -1,0 +1,30 @@
+{
+  "name": "DownloadBlocker",
+  "version": "0.0.1",
+  "manifest_version": 2,
+  "description": "This chrome extension blocks downloads of potentially dangerous file types. It can be used to block HTML Smuggling attacks or as a defense in depth approach in addition to your web proxy.",
+  "homepage_url": "https://github.com/SecurityJosh/DownloadBlocker",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png",
+    "192": "icons/icon192.png"
+  },
+  "default_locale": "en",
+  "background": {
+    "scripts": [
+      "src/utils.js",
+      "src/configuration.js",
+      "src/background.js"
+    ],
+    "persistent": false
+  },
+  "permissions": [
+    "downloads",
+    "notifications",
+    "tabs",
+    "http://*/*",
+    "https://*/*",
+    "<all_urls>"
+  ]
+}
