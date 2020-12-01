@@ -56,7 +56,7 @@ class configuration{
 
         var url = Utils.parseUrl(this.alertConfig.url, downloadItem);
 
-        var headers = this.alertConfig.headers ?? this.alertConfig.headers;
+        var headers = this.alertConfig.headers ?? {};
 
         if(this.alertConfig.method == "POST"){
             if(this.alertConfig.sendAsJson){
@@ -67,14 +67,14 @@ class configuration{
         }
 
         var postData = Utils.parseTemplate(this.alertConfig.postData, downloadItem);
-        
+
         if(this.alertConfig.sendAsJson){
             postData = JSON.stringify(postData);
         }else{
             postData = new URLSearchParams(postData);
         }
 
-        var alertResponse = await(Utils.XhrRequest(url, this.alertConfig.method, headers, postData))
+        var alertResponse = await Utils.XhrRequest(url, this.alertConfig.method, headers, postData);
 
         return alertResponse;
     }

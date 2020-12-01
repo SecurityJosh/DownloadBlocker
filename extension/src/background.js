@@ -36,6 +36,10 @@ function abortDownload(downloadItem){
     cancelDownloadInProgress(downloadItem);
   }
 
+  //if(Utils.isJsDownload(downloadItem)){
+  downloadItem.referringPage = Utils.getCurrentUrl();
+  //}
+
   Utils.notifyBlockedDownload(downloadItem);
 
   config.sendAlertMessage(downloadItem).then(response => {

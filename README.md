@@ -16,14 +16,31 @@ The format of the file is as follows:
 
     {
         "bannedExtensionsJs" : [],
-        "bannedExtensionsServer" : []
+        "bannedExtensionsServer" : [],
+
+        "alertConfig" : {
+            "url" : "https://postman-echo.com/post",
+            "headers" : {},
+            "method" : "GET|POST",
+            "postData" : {},
+            "sendAsJson" : true|false
+        } 
     }
 
 **bannedExtensionsJs** is an array of file extensions which should be blocked when downloaded via the HTML5 APIs.  
 
-**bannedExtensionsServer** is an array of file extensions which should be blocked when downloaded via a normal web server.   
+**bannedExtensionsServer** is an array of file extensions which should be blocked when downloaded via a normal web server.
 
-Both properties accept a wildcard operator (*), to block all downloads via that medium.
+(Both of these properties accept a wildcard operator (*), to block all downloads via that medium.)
+
+**alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system.
+
+Both URL and the values contained in the postData property can contain the following placeholders, which will be replaced with the actual alert data:
+{url}
+{filename}
+{timestamp}
+
+
   
 ## Default Configuration
 

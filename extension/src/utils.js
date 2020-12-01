@@ -8,17 +8,13 @@ var Utils = {
 
     notifyBlockedDownload(downloadItem){
 
-        
-      
-        if(Utils.isJsDownload(downloadItem)){
-          downloadItem.finalUrl = Utils.getCurrentUrl();
-        }
+       
       
         var notificationOptions = {
           type: "basic",
           iconUrl: "/icons/icon128.png",
           title: chrome.i18n.getMessage("download_blocked_message_title"),
-          message: chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, downloadItem.finalUrl])
+          message: chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, downloadItem.finalUrl, downloadItem.referringPage])
         };
       
         chrome.notifications.create(Utils.generateUuid(), notificationOptions);
@@ -73,14 +69,18 @@ var Utils = {
     },
 
     parseTemplate(postData, downloadItem){
+
+        var data = {};
+        
         for(let key in postData){
-            postData[key] = postData[key].replaceAll("{url}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now());
+            data[key] = postData[key].replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now());
         }
-        return postData;
+
+        return data;
     },
 
     parseUrl(url, downloadItem){
-        return url.replaceAll("{url}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.now());
+        return url.replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.now());
     }
 }
 
