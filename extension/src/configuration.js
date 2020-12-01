@@ -2,7 +2,7 @@ class configuration{
 
     bannedExtensionsJs = [];
     bannedExtensionsServer = [];
-    alertConfig = {};
+    alertConfig = null;
 
     constructor(json){
 
