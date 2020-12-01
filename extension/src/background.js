@@ -37,6 +37,10 @@ function abortDownload(downloadItem){
   }
 
   Utils.notifyBlockedDownload(downloadItem);
+
+  config.sendAlertMessage(downloadItem).then(response => {
+    console.log(response);
+  });
 }
 
 function processDownload(downloadItem){

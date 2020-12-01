@@ -1,6 +1,6 @@
 {
   "name": "Download Blocker",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "manifest_version": 2,
   "description": "This chrome extension blocks downloads of potentially dangerous file types. It can be used to block HTML smuggling attacks.",
   "homepage_url": "https://github.com/SecurityJosh/DownloadBlocker",
@@ -19,12 +19,15 @@
     ],
     "persistent": false
   },
+
+ 
+
   "permissions": [
     "downloads",
     "notifications",
     "tabs",
+    "file://C:\\ProgramData\\SecurityJosh\\DownloadBlocker\\config.json",
     "http://*/*",
-    "https://*/*",
-    "<all_urls>"
+    "https://*/*"
   ]
 }

@@ -8,17 +8,17 @@ var Utils = {
 
     notifyBlockedDownload(downloadItem){
 
-        var fileUrl = downloadItem.finalUrl;
+        
       
         if(Utils.isJsDownload(downloadItem)){
-          fileUrl = Utils.getCurrentUrl();
+          downloadItem.finalUrl = Utils.getCurrentUrl();
         }
       
         var notificationOptions = {
           type: "basic",
           iconUrl: "/icons/icon128.png",
           title: chrome.i18n.getMessage("download_blocked_message_title"),
-          message: chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, fileUrl])
+          message: chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, downloadItem.finalUrl])
         };
       
         chrome.notifications.create(Utils.generateUuid(), notificationOptions);
@@ -43,10 +43,15 @@ var Utils = {
       },
 
       // https://stackoverflow.com/a/48969580
-      XhrRequest(url) {
+      XhrRequest(url, method = 'GET', headers = {}, postData = null) {
         return new Promise(function (resolve, reject) {
             let xhr = new XMLHttpRequest();
-            xhr.open('GET', url);
+            xhr.open(method, url);
+
+            for(let key in headers){
+                xhr.setRequestHeader(key, headers[key]) 
+            }
+
             xhr.onload = function () {
                 if (xhr.responseText) {
                     resolve(xhr.responseText);
@@ -63,15 +68,26 @@ var Utils = {
                     statusText: xhr.statusText
                 });
             };
-            xhr.send();
+            xhr.send(postData);
         });
+    },
+
+    parseTemplate(postData, downloadItem){
+        for(let key in postData){
+            postData[key] = postData[key].replaceAll("{url}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now());
+        }
+        return postData;
+    },
+
+    parseUrl(url, downloadItem){
+        return url.replaceAll("{url}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.now());
     }
 }
 
 //https://stackoverflow.com/questions/54821584/chrome-extension-code-to-get-current-active-tab-url-and-detect-any-url-update-in
 // Keep track of current tab URL
 
-chrome.tabs.onActivated.addListener( function(activeInfo){
+chrome.tabs.onActivated.addListener(function(activeInfo){
   chrome.tabs.get(activeInfo.tabId, function(tab){
       Utils.currentUrl = tab.url;
   });

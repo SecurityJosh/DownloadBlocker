@@ -49,6 +49,36 @@ class configuration{
         return this.alertConfig;
     }
 
+    async sendAlertMessage(downloadItem){
+        if(!this.alertConfig){
+            return;
+        }
+
+        var url = Utils.parseUrl(this.alertConfig.url, downloadItem);
+
+        var headers = this.alertConfig.headers ?? this.alertConfig.headers;
+
+        if(this.alertConfig.method == "POST"){
+            if(this.alertConfig.sendAsJson){
+                headers["Content-Type"] = 'application/json';
+            }else{
+                headers["Content-Type"] = 'application/x-www-form-urlencoded';
+            }
+        }
+
+        var postData = Utils.parseTemplate(this.alertConfig.postData, downloadItem);
+        
+        if(this.alertConfig.sendAsJson){
+            postData = JSON.stringify(postData);
+        }else{
+            postData = new URLSearchParams(postData);
+        }
+
+        var alertResponse = await(Utils.XhrRequest(url, this.alertConfig.method, headers, postData))
+
+        return alertResponse;
+    }
+
     static async loadConfig(){
         var configFileUrls = ['file://C:\\ProgramData\\SecurityJosh\\DownloadBlocker\\config.json', chrome.runtime.getURL("config/config.json")];
         
