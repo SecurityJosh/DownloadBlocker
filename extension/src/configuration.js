@@ -83,9 +83,11 @@ class configuration{
         var configFileUrls = ['file://C:\\ProgramData\\SecurityJosh\\DownloadBlocker\\config.json', chrome.runtime.getURL("config/config.json")];
         
         for(var i = 0; i < configFileUrls.length; i++){
-            var config = await Utils.XhrRequest(configFileUrls[i]);
-            
-            if(!config){
+
+            var config = null;
+            try{
+                config = await Utils.XhrRequest(configFileUrls[i]);
+            }catch{
                 continue;
             }
 
