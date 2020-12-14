@@ -1,0 +1,13 @@
+{
+    "type": "object",
+
+    "properties": {
+
+      "Config": {
+        "title": "Config",
+        "description": "The JSON configuration for the chrome extension",
+        "type": "string"
+      }
+  }
+
+}

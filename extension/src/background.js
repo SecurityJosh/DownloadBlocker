@@ -6,7 +6,28 @@
 
 var config = null;
 
-configuration.loadConfig().then(c => config = c);
+chrome.storage.managed.get(managedConfig => {
+  if (managedConfig.Config){
+    console.log("Found managed config");
+    config = new configuration(JSON.parse(managedConfig.Config));
+  }else{
+    console.log("Didn't find managed config :(")
+    configuration.loadConfig().then(c => config = c);
+  }
+});
+
+chrome.storage.onChanged.addListener(function(changes, namespace) {
+  if(!namespace == "managed"){
+    return;
+  }
+
+  for (var key in changes) {
+    if(key == "Config"){
+      config = new configuration(JSON.parse(changes["Config"].newValue));
+    }
+  }
+});
+
 
 function cancelDownloadInProgress(downloadItem){
   chrome.downloads.cancel(downloadItem.id, function(){
@@ -59,10 +80,11 @@ function processDownload(downloadItem){
     console.log("Config wasn't loaded in time.");
     return;
   }
-
+  console.log(filename);
   console.log("Processing download with id: " + downloadItem.id);
 
   if(config.getShouldBlockDownload(downloadItem)){
+    console.log("aborting");
     abortDownload(downloadItem);
     return;
   }

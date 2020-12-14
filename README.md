@@ -8,24 +8,27 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Configuration
 
-This extension was created with enterprises in mind, so configuration isn't available to the end user. Instead, settings are read from the following location:
+This extension was created with enterprises in mind, so configuration isn't available to the end user. Instead, settings are applied via the 'Config' registry value under the following key:
 
-`C:\ProgramData\SecurityJosh\DownloadBlocker\config.json`
+`HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\bnabnnfebgikmgcipknmfkkiepekeopn\policy` (For Chromium Edge)
+`HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\bnabnnfebgikmgcipknmfkkiepekeopn\policy` (For Google Chrome)
 
-The format of the file is as follows:
+The 'Config' value is a JSON object with the following schema:
 
     {
         "bannedExtensionsJs" : [],
         "bannedExtensionsServer" : [],
 
         "alertConfig" : {
-            "url" : "https://postman-echo.com/post",
+            "url" : "URL",
             "headers" : {},
             "method" : "GET|POST",
             "postData" : {},
             "sendAsJson" : true|false
         } 
     }
+
+The JSON data should be minified before setting the registry value, for example by using [this](https://codebeautify.org/jsonminifier) tool.
 
 **bannedExtensionsJs** is an array of file extensions which should be blocked when downloaded via the HTML5 APIs.  
 
@@ -37,9 +40,30 @@ The format of the file is as follows:
 
 Both URL and the values contained in the postData property can contain the following placeholders, which will be replaced with the actual alert data:
 {url}
+{fileUrl}
 {filename}
 {timestamp}
 
+## Example Configuration
+
+    {
+        "bannedExtensionsJs" : ["*"],
+
+        "bannedExtensionsServer" : ["hta", "xbap"],
+
+        "alertConfig" : {
+            "url" : "https://postman-echo.com/post",
+            "headers" : {},
+            "method" : "POST",
+            "postData" : {
+                "filename" : "{filename}",
+                "fileUrl" : "{fileUrl}",
+                "url" : "{url}",
+                "time": "{timestamp}"
+            },
+            "sendAsJson" : true
+        } 
+    }
 
   
 ## Default Configuration
@@ -53,10 +77,9 @@ If no configuration file is present at the location given above, the following c
 
 ## Block Notification
 
-Users are notified of their downloads being blocked via a Chrome notification:
+Users are notified of their downloads being blocked via a browser notification:
 
 ![Block Notification](notification.png)
-
 
 ## Testing
 

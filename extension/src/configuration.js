@@ -21,7 +21,8 @@ class configuration{
     }
 
     isExtensionBanned(list, fileExtension){
-        return list.includes(fileExtension) || list.includes("*");
+        console.log(list);
+        return list.map(x => x.toLowerCase()).includes(fileExtension.toLowerCase()) || list.includes("*");
     }
 
     getShouldBlockDownload(downloadItem){
@@ -80,7 +81,7 @@ class configuration{
     }
 
     static async loadConfig(){
-        var configFileUrls = ['file://C:\\ProgramData\\SecurityJosh\\DownloadBlocker\\config.json', chrome.runtime.getURL("config/config.json")];
+        var configFileUrls = [chrome.runtime.getURL("config/config.json")];
         
         for(var i = 0; i < configFileUrls.length; i++){
 
