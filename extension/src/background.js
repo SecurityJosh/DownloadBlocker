@@ -23,6 +23,7 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 
   for (var key in changes) {
     if(key == "Config"){
+      console.log("config change detected");
       config = new configuration(JSON.parse(changes["Config"].newValue));
     }
   }
@@ -57,10 +58,6 @@ function abortDownload(downloadItem){
     cancelDownloadInProgress(downloadItem);
   }
 
-  //if(Utils.isJsDownload(downloadItem)){
-  downloadItem.referringPage = Utils.getCurrentUrl();
-  //}
-
   Utils.notifyBlockedDownload(downloadItem);
 
   config.sendAlertMessage(downloadItem).then(response => {
@@ -82,6 +79,8 @@ function processDownload(downloadItem){
   }
   console.log(filename);
   console.log("Processing download with id: " + downloadItem.id);
+
+  downloadItem.referringPage = Utils.getCurrentUrl();
 
   if(config.getShouldBlockDownload(downloadItem)){
     console.log("aborting");

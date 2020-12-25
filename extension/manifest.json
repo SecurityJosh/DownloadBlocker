@@ -23,8 +23,6 @@
     "persistent": false
   },
 
- 
-
   "permissions": [
     "downloads",
     "notifications",

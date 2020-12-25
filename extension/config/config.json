@@ -1,4 +1,8 @@
 {
-    "bannedExtensionsJs" : ["*", ".doc"],
-    "bannedExtensionsServer" : []
+    "rules" : [
+        {
+            "bannedExtensions" : ["*"],
+            "origin" : "local"
+        }
+    ]
 }

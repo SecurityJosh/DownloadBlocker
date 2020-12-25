@@ -1,19 +1,16 @@
 class configuration{
 
-    bannedExtensionsJs = [];
-    bannedExtensionsServer = [];
+    rules = {};
     alertConfig = null;
 
     constructor(json){
 
-        if(json.bannedExtensionsJs){
-            this.bannedExtensionsJs = json.bannedExtensionsJs;
+        if(json.rules && Array.isArray(json.rules)){
+            this.rules = json.rules.filter(x => this.isRuleValid(x));
         }
-        
-        if(json.bannedExtensionsServer){
-            this.bannedExtensionsServer = json.bannedExtensionsServer;
-        }
-        
+
+        console.log(this.rules.length + " rules loaded");
+
         if(json.alertConfig){
             this.alertConfig = json.alertConfig;
         }
@@ -21,21 +18,77 @@ class configuration{
     }
 
     isExtensionBanned(list, fileExtension){
-        console.log(list);
         return list.map(x => x.toLowerCase()).includes(fileExtension.toLowerCase()) || list.includes("*");
     }
 
-    getShouldBlockDownload(downloadItem){
+    isRuleValid(rule){
+        if(!(rule.bannedExtensions && Array.isArray(rule.bannedExtensions))){
+            return false;
+        }
 
+        if(!["local", "server", "any"].includes(rule.origin)){
+            return false;
+        }
+
+        if(rule.exceptions && !Array.isArray(rule.exceptions)){
+            return false;
+        }
+
+        return true;
+    }
+
+    doesExceptionExist(rule, downloadItem){
+
+        if(!downloadItem.exceptions){
+            return false;
+        }
+
+        for (let exceptionIndex = 0; exceptionIndex < rule.exceptions.length; exceptionIndex++) {
+            const exception = rule.exceptions[exceptionIndex];
+            
+            var exceptionType = exception.type;
+            var exceptionValue = exception.value;
+
+            if(exceptionType == "hostname" && downloadItem.referringPage != null && new URL(downloadItem.referringPage).hostname.toLowerCase() == exceptionValue.toLowerCase()){
+                return true;
+            }
+
+        }
+        return false;
+    }
+
+    doesDownloadMatchRule(rule, downloadItem){
         var fileExtension = Utils.getFileExtension(downloadItem.filename);
         
         var isJsDownload = Utils.isJsDownload(downloadItem);
 
-        if(isJsDownload){
-            return this.isExtensionBanned(this.bannedExtensionsJs, fileExtension); 
+        if(!this.isExtensionBanned(rule.bannedExtensions, fileExtension)){
+            return false;
         }
+
+        if((rule.origin == "local" && !isJsDownload) || rule.origin == 'server' && isJsDownload){
+            return false;
+        }
+
+        if(this.doesExceptionExist(rule, downloadItem)){
+            console.log("exception found");
+            return false;
+        }
+
+        return true;
+       
+    }
+
+    getShouldBlockDownload(downloadItem){
+        for (let ruleIndex = 0; ruleIndex < this.rules.length; ruleIndex++) {
+            const rule = this.rules[ruleIndex];
         
-        return this.isExtensionBanned(this.bannedExtensionsServer, fileExtension);
+            if(this.doesDownloadMatchRule(rule, downloadItem)){
+                return true;
+            }
+        }
+
+        return false;
     }
 
     getBannedExtensionsJs(){

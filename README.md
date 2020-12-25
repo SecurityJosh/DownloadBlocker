@@ -13,28 +13,42 @@ This extension was created with enterprises in mind, so configuration isn't avai
 `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\bnabnnfebgikmgcipknmfkkiepekeopn\policy` (For Chromium Edge)
 `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\bnabnnfebgikmgcipknmfkkiepekeopn\policy` (For Google Chrome)
 
+The JSON data should be minified before setting the registry value, for example by using [this](https://codebeautify.org/jsonminifier) tool.
+
 The 'Config' value is a JSON object with the following schema:
 
     {
-        "bannedExtensionsJs" : [],
-        "bannedExtensionsServer" : [],
 
-        "alertConfig" : {
-            "url" : "URL",
-            "headers" : {},
-            "method" : "GET|POST",
-            "postData" : {},
-            "sendAsJson" : true|false
+	"rules" : [
+		{
+			"bannedExtensions" : [],
+			"origin" : "local|server|any",
+			exceptions : [
+				{
+					"type" : "hostname",
+					"value" : "example.com"		
+				}
+			]
+		}
+	],
+
+    "alertConfig" : {
+        "url" : "https://postman-echo.com/post",
+        "headers" : {},
+        "method" : "POST",
+        "sendAsJson" : true,
+        "postData" : {
+            "filename" : "{filename}",
+            "fileUrl" : "{fileUrl}",
+            "url" : "{url}",
+            "time": "{timestamp}"
+        }
         } 
     }
 
-The JSON data should be minified before setting the registry value, for example by using [this](https://codebeautify.org/jsonminifier) tool.
+When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 
-**bannedExtensionsJs** is an array of file extensions which should be blocked when downloaded via the HTML5 APIs.  
-
-**bannedExtensionsServer** is an array of file extensions which should be blocked when downloaded via a normal web server.
-
-(Both of these properties accept a wildcard operator (*), to block all downloads via that medium.)
+The bannedExtensions object supports the wildcard operator ("*").
 
 **alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system.
 
@@ -47,21 +61,29 @@ Both URL and the values contained in the postData property can contain the follo
 ## Example Configuration
 
     {
-        "bannedExtensionsJs" : ["*"],
+        "rules" : [
+            {
+                "bannedExtensions" : ["*"],
+                "origin" : "local"
+            },
 
-        "bannedExtensionsServer" : ["hta", "xbap"],
+            {
+                "bannedExtensions" : ["hta", "xbap"],
+                "origin" : "any"
+            }
+	    ],
 
         "alertConfig" : {
             "url" : "https://postman-echo.com/post",
             "headers" : {},
             "method" : "POST",
+            "sendAsJson" : true,
             "postData" : {
                 "filename" : "{filename}",
                 "fileUrl" : "{fileUrl}",
                 "url" : "{url}",
                 "time": "{timestamp}"
-            },
-            "sendAsJson" : true
+            }
         } 
     }
 
@@ -71,8 +93,12 @@ Both URL and the values contained in the postData property can contain the follo
 If no configuration file is present at the location given above, the following configuration will apply:
 
     {
-        "bannedExtensionsJs" : ["*"],
-        "bannedExtensionsServer" : []
+        "rules" : [
+            {
+                "bannedExtensions" : ["*"],
+                "origin" : "local"
+            }
+        ]
     }
 
 ## Block Notification
