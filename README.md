@@ -19,36 +19,40 @@ The 'Config' value is a JSON object with the following schema:
 
     {
 
-	"rules" : [
-		{
-			"bannedExtensions" : [],
-			"origin" : "local|server|any",
-			exceptions : [
-				{
-					"type" : "hostname",
-					"value" : "example.com"		
-				}
-			]
-		}
-	],
+        "rules" : [
+            {
+                "bannedExtensions" : [],
+                "origin" : "local|server|any",
+                exceptions : [
+                    {
+                        "type" : "hostname",
+                        "value" : "example.com"		
+                    }
+                ]
+            }
+        ],
 
-    "alertConfig" : {
-        "url" : "https://postman-echo.com/post",
-        "headers" : {},
-        "method" : "POST",
-        "sendAsJson" : true,
-        "postData" : {
-            "filename" : "{filename}",
-            "fileUrl" : "{fileUrl}",
-            "url" : "{url}",
-            "time": "{timestamp}"
-        }
-        } 
+        "alertConfig" : {
+            "url" : "",
+            "headers" : {},
+            "method" : "POST",
+            "sendAsJson" : true,
+            "postData" : {
+                "filename" : "{filename}",
+                "fileUrl" : "{fileUrl}",
+                "url" : "{url}",
+                "time": "{timestamp}"
+            }
+        }   
     }
 
-When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
+### Banned Extensions
 
-The bannedExtensions object supports the wildcard operator ("*").
+The bannedExtensions object supports the wildcard operator ("*"), or an array of extensions (Without the leading '.')
+
+### Exclusions
+
+At the moment, the only valid type for an exception is "hostname". When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 
 **alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system.
 
@@ -74,7 +78,7 @@ Both URL and the values contained in the postData property can contain the follo
 	    ],
 
         "alertConfig" : {
-            "url" : "https://postman-echo.com/post",
+            "url" : "",
             "headers" : {},
             "method" : "POST",
             "sendAsJson" : true,
