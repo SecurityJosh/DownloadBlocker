@@ -109,7 +109,7 @@ If no configuration file is present at the location given above, the following c
 
 Users are notified of their downloads being blocked via a browser notification:
 
-![Block Notification](notification.png)
+![Block Notification](https://github.com/SecurityJosh/DownloadBlocker/raw/master/notification.png)
 
 ## Testing
 
