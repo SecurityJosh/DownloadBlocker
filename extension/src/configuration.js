@@ -133,27 +133,18 @@ class configuration{
         return alertResponse;
     }
 
-    static async loadConfig(){
-        var configFileUrls = [chrome.runtime.getURL("config/config.json")];
+    static async loadDefaultConfig(){
+        var configUrl = chrome.runtime.getURL("config/config.json");
         
-        for(var i = 0; i < configFileUrls.length; i++){
+        var config = await Utils.XhrRequest(configUrl);
 
-            var config = null;
-            try{
-                config = await Utils.XhrRequest(configFileUrls[i]);
-            }catch{
-                continue;
-            }
-
-            try{
-
-                var parsed = JSON.parse(config);
+        try{
+            var parsed = JSON.parse(config);
                 
-                console.log(`Loaded config from '${configFileUrls[i]}'`);
-
-                return new configuration(parsed);
-            }catch{}
-
+            console.log(`Loaded config from '${$configUrl}'`);
+            return new configuration(parsed);
+        }catch{
+            return null;
         }
     }
 }

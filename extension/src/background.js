@@ -1,21 +1,18 @@
-// if you checked "fancy-settings" in extensionizr.com, uncomment this lines
-
-// var settings = new Store("settings", {
-//     "sample_setting": "This is how you use Store.js to remember values"
-// });
-
 var config = null;
 
+// Load initial config
 chrome.storage.managed.get(managedConfig => {
   if (managedConfig.Config){
     console.log("Found managed config");
     config = new configuration(JSON.parse(managedConfig.Config));
   }else{
     console.log("Didn't find managed config :(")
-    configuration.loadConfig().then(c => config = c);
+    configuration.loadDefaultConfig().then(c => config = c);
   }
 });
 
+
+// Listen for config changes
 chrome.storage.onChanged.addListener(function(changes, namespace) {
   if(!namespace == "managed"){
     return;
@@ -29,13 +26,14 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
   }
 });
 
-
+// Cancel a download
 function cancelDownloadInProgress(downloadItem){
   chrome.downloads.cancel(downloadItem.id, function(){
     chrome.downloads.erase({"id" : downloadItem.id}, function(){});
   });
 }
 
+// Delete a download that has already finished
 function deleteSuccessfulDownload(downloadItem){
   chrome.downloads.removeFile(downloadItem.id, function(){
     if(chrome.runtime.lastError){
@@ -57,12 +55,6 @@ function abortDownload(downloadItem){
   }else{
     cancelDownloadInProgress(downloadItem);
   }
-
-  Utils.notifyBlockedDownload(downloadItem);
-
-  config.sendAlertMessage(downloadItem).then(response => {
-    console.log(response);
-  });
 }
 
 function processDownload(downloadItem){
@@ -77,6 +69,7 @@ function processDownload(downloadItem){
     console.log("Config wasn't loaded in time.");
     return;
   }
+
   console.log(filename);
   console.log("Processing download with id: " + downloadItem.id);
 
@@ -84,8 +77,14 @@ function processDownload(downloadItem){
 
   if(config.getShouldBlockDownload(downloadItem)){
     console.log("aborting");
+
     abortDownload(downloadItem);
-    return;
+
+    Utils.notifyBlockedDownload(downloadItem);
+
+    config.sendAlertMessage(downloadItem).then(response => {
+      console.log(response);
+    });
   }
 }
 
