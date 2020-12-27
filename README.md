@@ -107,6 +107,21 @@ If no configuration file is present at the location given above, the following c
         ]
     }
 
+## Enterprise Installation (Chrome)
+
+[Chrome policy ADMX required](https://support.google.com/chrome/a/answer/187202?hl=en)
+
+Administrative Templates -> Google -> Google Chrome -> Extensions -> Extension management settings
+
+The following JSON will force-install the chrome extension.
+
+    {
+        "kippogcnigegkjidkpfpaeimabcoboak": {
+            "installation_mode": "force_installed",
+            "update_url": "https://clients2.google.com/service/update2/crx"
+        }
+    }
+
 ## Block Notification
 
 Users are notified of their downloads being blocked via a browser notification:
