@@ -11,9 +11,9 @@ var Utils = {
           type: "basic",
           iconUrl: "/icons/icon128.png",
           title: chrome.i18n.getMessage("download_blocked_message_title"),
-          message: chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, downloadItem.finalUrl, downloadItem.referringPage])
+          message: chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, downloadItem.referringPage,  downloadItem.finalUrl])
         };
-      
+        
         chrome.notifications.create(Utils.generateUuid(), notificationOptions);
     },
 

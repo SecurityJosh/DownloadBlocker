@@ -3,9 +3,9 @@
   "storage" : {
    "managed_schema" : "schema.json"  
   },
-  "version": "0.0.2",
+  "version": "0.0.3",
   "manifest_version": 2,
-  "description": "This chrome extension blocks downloads of potentially dangerous file types. It can be used to block HTML smuggling attacks.",
+  "description": "This chrome extension was created to block HTML smuggling attacks. It can also block downloads of unwanted file types.",
   "homepage_url": "https://github.com/SecurityJosh/DownloadBlocker",
   "icons": {
     "16": "icons/icon16.png", 
@@ -27,8 +27,6 @@
     "downloads",
     "notifications",
     "tabs",
-    "storage",
-    "http://*/*",
-    "https://*/*"
+    "storage"
   ]
 }

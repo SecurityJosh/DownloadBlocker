@@ -22,11 +22,11 @@ class configuration{
     }
 
     isRuleValid(rule){
-        if(!(rule.bannedExtensions && Array.isArray(rule.bannedExtensions))){
+        if(!rule.bannedExtensions || !Array.isArray(rule.bannedExtensions)){
             return false;
         }
 
-        if(!["local", "server", "any"].includes(rule.origin)){
+        if(!["local", "server", "any"].includes(rule.origin.toLowerCase())){
             return false;
         }
 
@@ -65,8 +65,10 @@ class configuration{
         if(!this.isExtensionBanned(rule.bannedExtensions, fileExtension)){
             return false;
         }
+        
+        var ruleOrigin = rule.origin.toLowerCase();
 
-        if((rule.origin == "local" && !isJsDownload) || rule.origin == 'server' && isJsDownload){
+        if((ruleOrigin == "local" && !isJsDownload) || ruleOrigin == 'server' && isJsDownload){
             return false;
         }
 

@@ -50,7 +50,9 @@ The 'Config' value is a JSON object with the following schema:
 
 The bannedExtensions object supports the wildcard operator ("*"), or an array of extensions (Without the leading '.')
 
-### Exclusions
+### Exceptions
+
+Each rule object supports exceptions via the **exceptions** array. Each exception is made up of a type and a value.
 
 At the moment, the only valid type for an exception is "hostname". When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 

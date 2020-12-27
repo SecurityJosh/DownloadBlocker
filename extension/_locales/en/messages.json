@@ -4,20 +4,20 @@
     "description": "The title of the message shown to the user when a download is blocked"
   },
   "download_blocked_message_body": {
-    "message": "Download of $filename$ from $fileUrl$ has been blocked. Referring page: $url$",
+    "message": "Download of $filename$ from $url$ has been blocked. Download URL: $fileUrl$",
     "description": "The body of the message shown to the user when a download is blocked",
     "placeholders": {
       "filename": {
         "content": "$1",
         "example": "payslip.hta"
       },
-       "fileUrl": {
+       "url": {
         "content": "$2",
-        "example": "https://example.com/payslip.hta"
+        "example": "https://example.com/test.html"
       },
-      "url": {
+      "fileUrl": {
        "content": "$3",
-       "example": "https://example.com/"
+       "example": "https://example.com/payslip.hta"
      }
     }
   }
