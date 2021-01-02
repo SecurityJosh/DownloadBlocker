@@ -111,28 +111,22 @@ class configuration{
         }
 
         var url = Utils.parseUrl(this.alertConfig.url, downloadItem);
-
+        var postData = null;
         var headers = this.alertConfig.headers ?? {};
 
         if(this.alertConfig.method == "POST"){
+            postData = Utils.parseTemplate(this.alertConfig.postData, downloadItem);
+
             if(this.alertConfig.sendAsJson){
                 headers["Content-Type"] = 'application/json';
+                postData = JSON.stringify(postData);
             }else{
                 headers["Content-Type"] = 'application/x-www-form-urlencoded';
+                postData = new URLSearchParams(postData);
             }
         }
 
-        var postData = Utils.parseTemplate(this.alertConfig.postData, downloadItem);
-
-        if(this.alertConfig.sendAsJson){
-            postData = JSON.stringify(postData);
-        }else{
-            postData = new URLSearchParams(postData);
-        }
-
-        var alertResponse = await Utils.XhrRequest(url, this.alertConfig.method, headers, postData);
-
-        return alertResponse;
+        return await Utils.XhrRequest(url, this.alertConfig.method, headers, postData);
     }
 
     static async loadDefaultConfig(){
@@ -143,7 +137,7 @@ class configuration{
         try{
             var parsed = JSON.parse(config);
                 
-            console.log(`Loaded config from '${$configUrl}'`);
+            console.log(`Loaded config from '${configUrl}'`);
             return new configuration(parsed);
         }catch{
             return null;

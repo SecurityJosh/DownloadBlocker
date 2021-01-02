@@ -107,20 +107,27 @@ If no configuration file is present at the location given above, the following c
         ]
     }
 
-## Enterprise Installation (Chrome)
+## Enterprise Installation
 
-[Chrome policy ADMX required](https://support.google.com/chrome/a/answer/187202?hl=en)
+[Edge Policy](https://docs.microsoft.com/en-us/deployedge/configure-microsoft-edge) /  [Chrome Policy](https://support.google.com/chrome/a/answer/187202?hl=en) ADMX files required, or set the relevant registry key:
+
+`HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\ExtensionSettings`
+`HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionSettings`
 
 Administrative Templates -> Google -> Google Chrome -> Extensions -> Extension management settings
+Administrative Templates -> Microsoft Edge -> Extensions -> Extension management settings
 
-The following JSON will force-install the chrome extension.
+The following JSON will force-install the extension.
 
     {
         "kippogcnigegkjidkpfpaeimabcoboak": {
             "installation_mode": "force_installed",
-            "update_url": "https://clients2.google.com/service/update2/crx"
+            "update_url": "https://clients2.google.com/service/update2/crx",
+            "runtime_blocked_hosts" : ["*://*"]
         }
     }
+
+For Microsoft Edge on Windows, extensions from outside the Microsoft Extension Store can only be installed from a domain-joined / managed device system.
 
 ## Block Notification
 
