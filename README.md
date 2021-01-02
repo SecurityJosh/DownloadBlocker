@@ -35,14 +35,9 @@ The 'Config' value is a JSON object with the following schema:
         "alertConfig" : {
             "url" : "",
             "headers" : {},
-            "method" : "POST",
-            "sendAsJson" : true,
-            "postData" : {
-                "filename" : "{filename}",
-                "fileUrl" : "{fileUrl}",
-                "url" : "{url}",
-                "time": "{timestamp}"
-            }
+            "method" : "GET|POST",
+            "sendAsJson" : true|false,
+            "postData" : {}
         }   
     }
 
@@ -52,7 +47,7 @@ The bannedExtensions object supports the wildcard operator ("*"), or an array of
 
 ### Exceptions
 
-Each rule object supports exceptions via the **exceptions** array. Each exception is made up of a type and a value.
+Each rule object optionally supports exceptions via the **exceptions** array. Each exception is made up of a type and a value.
 
 At the moment, the only valid type for an exception is "hostname". When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 
