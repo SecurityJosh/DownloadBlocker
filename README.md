@@ -41,6 +41,8 @@ The 'Config' value is a JSON object with the following schema:
 
 The JSON data should be minified before setting the registry value, for example by using [this](https://codebeautify.org/jsonminifier) tool.
 
+**Note: It can take a while for Chrome to apply an updated policy. For testing purposes, you may need to go to chrome://policy or edge://policy to check if the policy has been loaded. You can also manually reload the policies via the 'Reload Policies' button. Note that Edge doesn't appear to display extension configuration settings, but they are actually still loaded.**
+
 ### Banned Extensions
 
 The bannedExtensions object supports an array containing either:
@@ -64,10 +66,10 @@ At the moment, the only valid type for an exception is "hostname". When download
 **alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system.
 
 Both URL and the values contained in the postData property can contain the following placeholders, which will be replaced with the actual alert data:
-{url}
-{fileUrl}
-{filename}
-{timestamp}
+* {url}
+* {fileUrl}
+* {filename}
+* {timestamp}
 
 ## Example Configuration
 
@@ -85,7 +87,7 @@ Both URL and the values contained in the postData property can contain the follo
 	    ],
 
         "alertConfig" : {
-            "url" : "",
+            "url" : "https://siem/ingest",
             "headers" : {},
             "method" : "POST",
             "sendAsJson" : true,
@@ -98,7 +100,6 @@ Both URL and the values contained in the postData property can contain the follo
         } 
     }
 
-  
 ## Default Configuration
 
 If no configuration file is present at the location given above, the following configuration will apply:
