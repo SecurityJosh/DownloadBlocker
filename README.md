@@ -1,5 +1,7 @@
 # Download Blocker
 
+Chrome web store link: https://chrome.google.com/webstore/detail/download-blocker/kippogcnigegkjidkpfpaeimabcoboak
+
 ## What is it?
 
 Download Blocker is a Google Chrome extension which blocks certain files from being downloaded, based on their extension / origin. It was created as a way to prevent HTML smuggling attacks, but it can also block downloads from webservers too.
