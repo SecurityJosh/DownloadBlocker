@@ -70,7 +70,7 @@ var Utils = {
         var data = {};
         
         for(let key in postData){
-            data[key] = postData[key].replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now());
+            data[key] = String(postData[key]).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now());
         }
 
         return data;
