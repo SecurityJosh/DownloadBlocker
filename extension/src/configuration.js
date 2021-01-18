@@ -39,7 +39,7 @@ class configuration{
 
     doesExceptionExist(rule, downloadItem){
 
-        if(!downloadItem.exceptions){
+        if(!rule.exceptions){
             return false;
         }
 
