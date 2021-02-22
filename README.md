@@ -15,6 +15,8 @@ This extension was created with enterprises in mind, so configuration isn't avai
 `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\kippogcnigegkjidkpfpaeimabcoboak\policy` (For Google Chrome)
 `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\kippogcnigegkjidkpfpaeimabcoboak\policy` (For Chromium Edge)
 
+![Registry Configuration - Chrome](https://github.com/SecurityJosh/DownloadBlocker/raw/master/registry_chrome.png)
+
 The 'Config' value is a JSON object with the following schema:
 
     {
@@ -23,7 +25,7 @@ The 'Config' value is a JSON object with the following schema:
             {
                 "bannedExtensions" : [],
                 "origin" : "local|server|any",
-                exceptions : [
+                "exceptions" : [
                     {
                         "type" : "hostname",
                         "value" : "example.com"		
@@ -61,7 +63,13 @@ The bannedExtensions object supports an array containing either:
 
 Each rule object optionally supports exceptions via the **exceptions** array. Each exception is made up of a type and a value.
 
-At the moment, the only valid type for an exception is "hostname". When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
+At the moment, the only valid types for an exception are "hostname" and "basedomain".
+
+Hostname does an exact match comparison, while base domain will accept subdomains. For example:
+
+A hostname exception of 'example.com', will match example.com, but not a.example.com. The same basename exception will match both.
+
+When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 
 ### Alerts
 
@@ -115,7 +123,7 @@ If no configuration file is present at the location given above, the following c
         ]
     }
 
-## Enterprise Installation
+## Enterprise Configuration
 
 [Chrome Policy](https://support.google.com/chrome/a/answer/187202?hl=en) / [Edge Policy](https://docs.microsoft.com/en-us/deployedge/configure-microsoft-edge) ADMX files required, or set the relevant registry key:
 
@@ -126,7 +134,7 @@ If no configuration file is present at the location given above, the following c
 
 `Administrative Templates -> Microsoft Edge -> Extensions -> Extension management settings`
 
-The following JSON will force-install the extension.
+The following JSON will force-install the extension and prevent users from disabling or uninstalling it.
 
     {
         "kippogcnigegkjidkpfpaeimabcoboak": {
@@ -136,7 +144,9 @@ The following JSON will force-install the extension.
         }
     }
 
-For Microsoft Edge on Windows, extensions from outside the Microsoft Extension Store can only be installed from a domain-joined / managed device system.
+You will need to minify this JSON. [This](https://mythic-byway-180716.appspot.com/) tool allows you you validate and minify your chrome policy JSON.
+
+For Microsoft Edge on Windows, extensions from outside the Microsoft Extension Store can only be force-installed from a domain-joined / managed device system.
 
 ## Block Notification
 

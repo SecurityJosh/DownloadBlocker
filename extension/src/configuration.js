@@ -46,14 +46,26 @@ class configuration{
         for (let exceptionIndex = 0; exceptionIndex < rule.exceptions.length; exceptionIndex++) {
             const exception = rule.exceptions[exceptionIndex];
             
-            var exceptionType = exception.type;
-            var exceptionValue = exception.value;
-
-            if(exceptionType == "hostname" && downloadItem.referringPage != null && new URL(downloadItem.referringPage).hostname.toLowerCase() == exceptionValue.toLowerCase()){
-                return true;
+            var exceptionType = exception.type.toLowerCase();
+            var exceptionValue = exception.value.toLowerCase();
+            
+            if(!downloadItem.referringPage){
+                return false;
             }
 
+            var downloadHostname = new URL(downloadItem.referringPage).hostname;
+
+            switch(exceptionType){
+                case "hostname":
+                    return downloadHostname == exceptionValue.toLowerCase();
+                case "basedomain":
+                    return ('.' + downloadHostname).endsWith('.' + exceptionValue);
+                default:
+                    console.log(`exceptionType: '${exceptionType}' was not recognised`);
+                    return false;
+            }
         }
+
         return false;
     }
 
