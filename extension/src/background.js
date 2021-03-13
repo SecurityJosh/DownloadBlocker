@@ -1,16 +1,30 @@
 var config = null;
 
+var downloadHashes = {};
+
 // Load initial config
 chrome.storage.managed.get(managedConfig => {
   if (managedConfig.Config){
     console.log("Found managed config");
     config = new configuration(JSON.parse(managedConfig.Config));
   }else{
-    console.log("Didn't find managed config :(")
-    configuration.loadDefaultConfig().then(c => config = c);
+    console.log("Didn't find managed config, using default.")
+    configuration.loadDefaultConfig().then(defaultConfig => config = defaultConfig);
   }
 });
 
+// Listen for async event giving us a file's SHA256 hash.
+chrome.runtime.onMessage.addListener(
+  function(request, sender, sendResponse) {
+    // console.log(sender.tab ? "from a content script:" + sender.tab.url : "from the extension");
+    console.log(request);
+
+    if (!downloadHashes[request.id] || downloadHashes[request.id] == "Pending"){
+      downloadHashes[request.id] = request.sha256;
+    }
+    sendResponse(true);
+    }
+);
 
 // Listen for config changes
 chrome.storage.onChanged.addListener(function(changes, namespace) {
@@ -44,7 +58,6 @@ function deleteSuccessfulDownload(downloadItem){
   });
 }
 
-
 function abortDownload(downloadItem){    
   if(downloadItem.state == "interrupted"){
     return;
@@ -55,6 +68,24 @@ function abortDownload(downloadItem){
   }else{
     cancelDownloadInProgress(downloadItem);
   }
+}
+
+// https://stackoverflow.com/a/44476626
+function timer(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+async function waitForFileHash(downloadItem){
+  while(downloadHashes[downloadItem.finalUrl] && downloadHashes[downloadItem.finalUrl] == "Pending"){
+    await timer(250);
+  }
+
+  if(downloadHashes[downloadItem.finalUrl]){
+    downloadItem.sha256 = downloadHashes[downloadItem.finalUrl];
+    delete downloadHashes[downloadItem.finalUrl];
+  }
+  
+  var notificationResult = await config.sendAlertMessage(downloadItem);
+  return notificationResult;
+
 }
 
 function processDownload(downloadItem){
@@ -79,12 +110,12 @@ function processDownload(downloadItem){
     console.log("aborting");
 
     abortDownload(downloadItem);
-
-    Utils.notifyBlockedDownload(downloadItem);
-
-    config.sendAlertMessage(downloadItem).then(response => {
-      console.log(response);
-    });
+  
+      Utils.notifyBlockedDownload(downloadItem);
+  
+      waitForFileHash(downloadItem).then(response => {
+        console.log(response);
+      });
   }
 }
 

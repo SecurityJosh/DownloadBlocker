@@ -17,7 +17,7 @@ class configuration{
         
     }
 
-    isExtensionBanned(list, fileExtension){
+    isExtensionInList(list, fileExtension){
         return list.map(x => x.toLowerCase()).includes(fileExtension.toLowerCase()) || list.includes("*");
     }
 
@@ -60,8 +60,10 @@ class configuration{
                     return downloadHostname == exceptionValue.toLowerCase();
                 case "basedomain":
                     return ('.' + downloadHostname).endsWith('.' + exceptionValue);
+                case "fileextensions":
+                    return this.isExtensionInList(exceptionValue, Utils.getFileExtension(downloadItem.filename));
                 default:
-                    console.log(`exceptionType: '${exceptionType}' was not recognised`);
+                    console.log(`exceptionType: '${exceptionType}' was not recognised. Value given: '${exceptionValue}'`);
                     return false;
             }
         }
@@ -74,7 +76,7 @@ class configuration{
         
         var isJsDownload = Utils.isJsDownload(downloadItem);
 
-        if(!this.isExtensionBanned(rule.bannedExtensions, fileExtension)){
+        if(!this.isExtensionInList(rule.bannedExtensions, fileExtension)){
             return false;
         }
         
@@ -156,4 +158,3 @@ class configuration{
         }
     }
 }
-

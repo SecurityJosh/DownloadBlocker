@@ -8,6 +8,20 @@ Download Blocker is a Google Chrome extension which blocks certain files from be
 
 HTML smuggling is essentially a technique for bypassing web-proxies / firewalls that detect executable content being downloaded from a server. It does this by using HTML5 APIs to provide a download purely using javascript, without making a request to a webserver. For an in-depth description of HTML smuggling, please see the references below.
 
+## Change Log
+### 0.0.9
+* The exceptions system now supports a 'fileExtensions' type, which supports allow-listing a set of file extensions. This can be used to block all but a few file extensions when bannedExtensions is set to ["*"].
+* For HTML-Smuggled files only, a SHA256 hash of the file content is now available when sending alerts to an external server. 
+
+  N.B. In previous versions of this README, the example Chrome GPO configuration included a wildcard match for the runtime_blocked_hosts property. For the SHA256 field to be populated, the runtime_blocked_hosts property must be removed from the Chrome Extension GPO configuration.
+
+  Additionally, for alerting to work when this wildcard runtime_blocked_hosts property exists, the host must be explicitly allowed via the runtime_allowed_hosts property.
+
+  N.B. Unless "Allow access to file URLs" has been enabled for the extension, SHA256 hashes will not be available for downloads via a file:// origin.
+
+### 0.0.8
+* The exceptions system now supports a 'basename' type, which supports allow-listing a domain and its sub-domains.
+
 ## Configuration
 
 This extension was created with enterprises in mind, so configuration isn't available to the end user. Instead, settings are applied via the 'Config' registry value under the following key:
@@ -20,14 +34,13 @@ This extension was created with enterprises in mind, so configuration isn't avai
 The 'Config' value is a JSON object with the following schema:
 
     {
-
         "rules" : [
             {
                 "bannedExtensions" : [],
                 "origin" : "local|server|any",
                 "exceptions" : [
                     {
-                        "type" : "hostname",
+                        "type" : "hostname|basename",
                         "value" : "example.com"		
                     }
                 ]
@@ -73,13 +86,14 @@ When downloading a file via JS, hostname is the hostname of the page the downloa
 
 ### Alerts
 
-**alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system.
+**alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system. For example, you can set up a "Web bug / URL" [canary token](https://canarytokens.com/generate) and have it capture alert information using custom query string parameters.
 
 Both URL and the values contained in the postData property can contain the following placeholders, which will be replaced with the actual alert data:
 * {url}
 * {fileUrl}
 * {filename}
 * {timestamp}
+* {sha256} (Only for HTML Smuggled downloads)
 
 ## Example Configuration
 
@@ -105,6 +119,7 @@ Both URL and the values contained in the postData property can contain the follo
                 "filename" : "{filename}",
                 "fileUrl" : "{fileUrl}",
                 "url" : "{url}",
+                "sha256" : "{sha256}",
                 "time": "{timestamp}"
             }
         } 
@@ -139,8 +154,7 @@ The following JSON will force-install the extension and prevent users from disab
     {
         "kippogcnigegkjidkpfpaeimabcoboak": {
             "installation_mode": "force_installed",
-            "update_url": "https://clients2.google.com/service/update2/crx",
-            "runtime_blocked_hosts" : ["*://*"]
+            "update_url": "https://clients2.google.com/service/update2/crx"
         }
     }
 
