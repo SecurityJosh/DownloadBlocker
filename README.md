@@ -76,12 +76,13 @@ The bannedExtensions object supports an array containing either:
 
 Each rule object optionally supports exceptions via the **exceptions** array. Each exception is made up of a type and a value.
 
-At the moment, the only valid types for an exception are "hostname" and "basedomain".
+| Exception Type | Description                      | Expected Type    | Example Value                   |
+|----------------|----------------------------------|------------------|---------------------------------|
+| hostname       | Exact Hostname match             | String           | "specificsubdomain.example.com" |
+| basedomain     | Hostname and any subdomain match | String           | "example.com"                   |
+| fileExtensions | File extensions match            | Array of strings | ["txt", "csv"]                  |
 
-Hostname does an exact match comparison, while base domain will accept subdomains. For example:
-
-A hostname exception of 'example.com', will match example.com, but not a.example.com. The same basename exception will match both.
-
+\
 When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 
 ### Alerts
