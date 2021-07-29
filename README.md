@@ -9,18 +9,29 @@ Download Blocker is a Google Chrome extension which blocks certain files from be
 HTML smuggling is essentially a technique for bypassing web-proxies / firewalls that detect executable content being downloaded from a server. It does this by using HTML5 APIs to provide a download purely using javascript, without making a request to a webserver. For an in-depth description of HTML smuggling, please see the references below.
 
 ## Change Log
+
+### 0.1.1
+* Added the 'notify' rule action. Rules with this action will notify the end user, as well as optionally sending an external alert, however the download will not be blocked.
+* Added the ability for the user-facing notification text to be customised by using the 'messageTemplate' property. This property can contain the same placeholders as the alert configuration. Applies to both 'block' and 'notify' rule actions.
+* Similarly, the notification title can be changed using the 'titleTemplate' property.
+
+### 0.1.0
+* Added the 'action' rule property, which supports "audit" and "block" modes. In audit mode, the download is permitted and an external alert is sent, but no user notification is shown.
+* Added 'state' and 'action' to the available metadata for alerting.
+* The extension now gets the page URL via javascript where possible instead of inferring it from the currently active tab.
+
 ### 0.0.9
 * The exceptions system now supports a 'fileExtensions' type, which supports allow-listing a set of file extensions. This can be used to block all but a few file extensions when bannedExtensions is set to ["*"].
 * For HTML-Smuggled files only, a SHA256 hash of the file content is now available when sending alerts to an external server. 
 
-  N.B. In previous versions of this README, the example Chrome GPO configuration included a wildcard match for the runtime_blocked_hosts property. For the SHA256 field to be populated, the runtime_blocked_hosts property must be removed from the Chrome Extension GPO configuration.
+  **N.B. In previous versions of this README, the example Chrome GPO configuration included a wildcard match for the runtime_blocked_hosts property. For the SHA256 field to be populated, the runtime_blocked_hosts property must be removed from the Chrome Extension GPO configuration.**
 
-  Additionally, for alerting to work when this wildcard runtime_blocked_hosts property exists, the host must be explicitly allowed via the runtime_allowed_hosts property.
+  **Additionally, for alerting to work when this wildcard runtime_blocked_hosts property exists, the host must be explicitly allowed via the runtime_allowed_hosts property.**
 
-  N.B. Unless "Allow access to file URLs" has been enabled for the extension, SHA256 hashes will not be available for downloads via a file:// origin.
+  **N.B. Unless "Allow access to file URLs" has been enabled for the extension, SHA256 hashes will not be available for downloads via a file:// origin.**
 
 ### 0.0.8
-* The exceptions system now supports a 'basename' type, which supports allow-listing a domain and its sub-domains.
+* The exceptions system now supports a 'basedomain' type, which supports allow-listing a domain and its sub-domains.
 
 ## Configuration
 
@@ -40,10 +51,13 @@ The 'Config' value is a JSON object with the following schema:
                 "origin" : "local|server|any",
                 "exceptions" : [
                     {
-                        "type" : "hostname|basename",
+                        "type" : "hostname|baseDomain|fileExtensions",
                         "value" : "example.com"		
                     }
-                ]
+                ],
+                "action" : "audit|block|notify",
+                "titleTemplate" : "Notification Title",
+                "messageTemplate" : "Notification message"
             }
         ],
 
@@ -85,15 +99,35 @@ Each rule object optionally supports exceptions via the **exceptions** array. Ea
 \
 When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 
+### Action
+
+| Action Type     | Is the download blocked?         | Is the user notified?    | HTTP Alert Sent (If configured) |
+|-----------------|----------------------------------|--------------------------|---------------------------------|
+| block (default) | Yes                              | Yes                      | Yes                             |
+| audit           | No *                             | No *                     | Yes                             |
+| notify          | No                               | Yes                      | Yes                             |
+
+\* If audit mode is chosen, but no alert config is present, the extension will revert back to block mode.
+
+If multiple rules are matched, the first block rule takes precedence. An audit or notify rule will only be used if no block rules are matched.
+
+### titleTemplate and messageTemplate
+
+The **titleTemplate** and **messageTemplate** properties allow you to customise the toast notification sent to the user when a user is notified of a download or a download block. It supports the same template strings as the alert URL / post data.
+
 ### Alerts
 
-**alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system. For example, you can set up a "Web bug / URL" [canary token](https://canarytokens.com/generate) and have it capture alert information using custom query string parameters.
+*alertConfig is a global setting, not a per-rule setting.*
+
+**alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system. For example, you can set up a "Web bug / URL" [canary token](https://canarytokens.com/generate) and have it capture alert information using custom query string parameters, which will send you an email when triggered.
 
 Both URL and the values contained in the postData property can contain the following placeholders, which will be replaced with the actual alert data:
 * {url}
 * {fileUrl}
 * {filename}
 * {timestamp}
+* {state} (Download state)
+* {action} (Rule action, block or audit)
 * {sha256} (Only for HTML Smuggled downloads)
 
 ## Example Configuration
@@ -102,12 +136,14 @@ Both URL and the values contained in the postData property can contain the follo
         "rules" : [
             {
                 "bannedExtensions" : ["*"],
-                "origin" : "local"
+                "origin" : "local",
+                "action": "block"
             },
 
             {
                 "bannedExtensions" : ["hta", "xbap"],
-                "origin" : "any"
+                "origin" : "any",
+                "action": "audit"
             }
 	    ],
 
@@ -121,7 +157,9 @@ Both URL and the values contained in the postData property can contain the follo
                 "fileUrl" : "{fileUrl}",
                 "url" : "{url}",
                 "sha256" : "{sha256}",
-                "time": "{timestamp}"
+                "time": "{timestamp}",
+                "action": "{action}",
+                "state" : "{state}"
             }
         } 
     }

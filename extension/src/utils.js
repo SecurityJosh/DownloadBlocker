@@ -6,12 +6,13 @@ var Utils = {
         );
     },
 
-    notifyBlockedDownload(downloadItem){
+    notifyUser(title, message){
+
         var notificationOptions = {
           type: "basic",
           iconUrl: "/icons/icon128.png",
-          title: chrome.i18n.getMessage("download_blocked_message_title"),
-          message: chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, downloadItem.referringPage,  downloadItem.finalUrl])
+          title: title,
+          message: message
         };
         
         chrome.notifications.create(Utils.generateUuid(), notificationOptions);
@@ -65,33 +66,26 @@ var Utils = {
         });
     },
 
+    parseString(template, downloadItem){
+        if(!template){
+            return null;
+        }
+        return template.replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
+
+    },
+
     parseTemplate(postData, downloadItem){
 
         var data = {};
         
         for(let key in postData){
-            data[key] = String(postData[key]).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
+            data[key] = this.parseString(String(postData[key]), downloadItem);
         }
 
         return data;
     },
 
     parseUrl(url, downloadItem){
-        return url.replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
+        return url.replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
     }
 }
-
-//https://stackoverflow.com/questions/54821584/chrome-extension-code-to-get-current-active-tab-url-and-detect-any-url-update-in
-// Keep track of current tab URL
-
-chrome.tabs.onActivated.addListener(function(activeInfo){
-  chrome.tabs.get(activeInfo.tabId, function(tab){
-      Utils.currentUrl = tab.url;
-  });
-});
-
-chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
-  if (tab.active && change.url) {
-      Utils.currentUrl = change.url;         
-  }
-});

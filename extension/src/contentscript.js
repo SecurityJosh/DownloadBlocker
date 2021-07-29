@@ -48,9 +48,9 @@ injectScript(`
 // processHash
 injectScript(`
     /* https://stackoverflow.com/a/19312198 */
-    function processHash(id, sha256){
+    function processHash(id, initiatingPage, sha256){
         document.dispatchEvent(new CustomEvent('kippogcnigegkjidkpfpaeimabcoboak_Hash', {
-            detail: {id: id, sha256: sha256}
+            detail: {id: id, sha256: sha256, initiatingPage: initiatingPage}
         }));
     }
     `);
@@ -71,11 +71,11 @@ injectScript(`
         var fileReader = new FileReader();
         fileReader.readAsArrayBuffer(obj);
         
-        processHash(url, "Pending");
+        processHash(url, window.location.href, "Pending");
 
         fileReader.onloadend = function () {
             crypto.subtle.digest("SHA-256", fileReader.result).then(digest => {
-                processHash(url, digestToHex(digest));
+                processHash(url, window.location.href, digestToHex(digest));
             });
         }
 
@@ -104,10 +104,10 @@ injectScript(`
                             
                         var encoded = new TextEncoder().encode(downloadData);
                         
-                        processHash(element.href, "Pending");
+                        processHash(element.href, window.location.href, "Pending");
 
                         crypto.subtle.digest("SHA-256", encoded).then(digest => {
-                            processHash(element.href, digestToHex(digest));
+                            processHash(element.href, window.location.href, digestToHex(digest));
                         });
                     }
                 }

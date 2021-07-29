@@ -26,11 +26,15 @@ class configuration{
             return false;
         }
 
-        if(!["local", "server", "any"].includes(rule.origin.toLowerCase())){
+        if(!rule.origin || !["local", "server", "any"].includes(rule.origin.toLowerCase())){
             return false;
         }
 
         if(rule.exceptions && !Array.isArray(rule.exceptions)){
+            return false;
+        }
+
+        if(!["block", "audit", "notify"].includes(this.getRuleAction(rule))){
             return false;
         }
 
@@ -95,24 +99,37 @@ class configuration{
        
     }
 
-    getShouldBlockDownload(downloadItem){
+    getRuleAction(rule){
+        if(!rule.action){
+            return "block";
+        }
+
+        return rule.action.toLowerCase();
+    }
+
+
+    getMatchedRule(downloadItem){
+
+        var matchedRule = null;
+
         for (let ruleIndex = 0; ruleIndex < this.rules.length; ruleIndex++) {
             const rule = this.rules[ruleIndex];
         
             if(this.doesDownloadMatchRule(rule, downloadItem)){
-                return true;
+                
+                if(this.getRuleAction(rule) == "block"){
+                    return rule;
+                }
+
+                matchedRule = rule;
             }
         }
 
-        return false;
+        return matchedRule;
     }
 
     getBannedExtensionsJs(){
         return this.bannedExtensions;
-    }
-
-    getShouldBlockAllJsDownloads(){
-        return this.blockAllJsDownloads;
     }
 
     getAlertConfig(){

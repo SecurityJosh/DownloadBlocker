@@ -19,11 +19,11 @@ chrome.runtime.onMessage.addListener(
     // console.log(sender.tab ? "from a content script:" + sender.tab.url : "from the extension");
     console.log(request);
 
-    if (!downloadHashes[request.id] || downloadHashes[request.id] == "Pending"){
-      downloadHashes[request.id] = request.sha256;
+    if (!downloadHashes[request.id] || downloadHashes[request.id].sha256 == "Pending"){
+      downloadHashes[request.id] = {"sha256" : request["sha256"], "initiatingPage" : request["initiatingPage"] };
     }
     sendResponse(true);
-    }
+  }
 );
 
 // Listen for config changes
@@ -74,22 +74,21 @@ function abortDownload(downloadItem){
 function timer(ms) { return new Promise(res => setTimeout(res, ms)); }
 
 async function waitForFileHash(downloadItem){
-  while(downloadHashes[downloadItem.finalUrl] && downloadHashes[downloadItem.finalUrl] == "Pending"){
+  while(downloadHashes[downloadItem.finalUrl] && downloadHashes[downloadItem.finalUrl].sha256 == "Pending"){
     await timer(250);
   }
 
-  if(downloadHashes[downloadItem.finalUrl]){
-    downloadItem.sha256 = downloadHashes[downloadItem.finalUrl];
-    delete downloadHashes[downloadItem.finalUrl];
-  }
-  
-  var notificationResult = await config.sendAlertMessage(downloadItem);
-  return notificationResult;
+  var downloadDetails = downloadHashes[downloadItem.finalUrl];
 
+  if(downloadDetails){
+    downloadItem.sha256 = downloadDetails.sha256;
+    downloadItem.referringPage = downloadDetails.initiatingPage
+    //delete downloadHashes[downloadItem.finalUrl];
+  }
 }
 
-function processDownload(downloadItem){
-  
+async function processDownload(downloadItem){
+  console.log(downloadItem);  
   var filename = downloadItem.filename;
 
   if(!filename){
@@ -106,30 +105,74 @@ function processDownload(downloadItem){
 
   downloadItem.referringPage = Utils.getCurrentUrl();
 
-  if(config.getShouldBlockDownload(downloadItem)){
-    console.log("aborting");
+  var matchedRule = config.getMatchedRule(downloadItem);
 
-    abortDownload(downloadItem);
-  
-      Utils.notifyBlockedDownload(downloadItem);
-  
-      waitForFileHash(downloadItem).then(response => {
-        console.log(response);
-      });
+  if(!matchedRule){
+    console.log("Download didn't match any rules")
+    return;
   }
+
+  // Default to block except where action is set explicitly to something else
+
+  var ruleAction = config.getRuleAction(matchedRule);
+  
+  downloadItem["action"] = ruleAction;
+
+  var shouldBlockDownload = (ruleAction !== "audit") && (ruleAction !== "notify");
+
+  if(shouldBlockDownload || ruleAction == "audit" && !config.getAlertConfig()){
+    if(shouldBlockDownload){
+      console.log("Action not set to audit, blocking download");
+    }else{
+      console.log("Action set to audit, but no alertConfig is specified, blocking download");
+    }
+    
+    abortDownload(downloadItem);
+
+    var title = Utils.parseString(matchedRule.titleTemplate, downloadItem) || chrome.i18n.getMessage("download_blocked_message_title");
+    var message = Utils.parseString(matchedRule.messageTemplate, downloadItem) || chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, downloadItem.referringPage, downloadItem.finalUrl]);
+    Utils.notifyUser(title, message);
+
+  }else{
+    if(ruleAction == "notify"){
+
+      if(downloadItem.state !== "complete"){
+        console.log("Wait for download to finish before issuing notification");
+        return;
+      }
+
+      console.log("Rule action is set to notify");
+
+      var title = Utils.parseString(matchedRule.titleTemplate, downloadItem) || chrome.i18n.getMessage("download_notify_message_title");
+      var message = Utils.parseString(matchedRule.messageTemplate, downloadItem) || chrome.i18n.getMessage("download_notify_message_body", [downloadItem.filename, downloadItem.referringPage, downloadItem.finalUrl]);
+      Utils.notifyUser(title, message);
+
+    }else{
+      console.log("Rule action is set to audit, download won't be blocked.");
+    }
+  }
+
+  await waitForFileHash(downloadItem);
+  await config.sendAlertMessage(downloadItem)
+
+  console.log(downloadItem);
 }
 
+
+// onDeterminingFilename doesn't seem to trigger for files downloaded via CTRL + S, so we use .onChanged for these instances
 chrome.downloads.onChanged.addListener(function callback(downloadDelta){
   if(downloadDelta.state){
+
     chrome.downloads.search({'id' : downloadDelta.id}, function(items){
       if(items && items.length == 1){
-        processDownload(items[0]);
+        processDownload(items[0]).then({});
       }
     });
   }
 });
 
 // By listening for this event we can cancel the download before the user even sees a save-as prompt.
+// Unfortunately, the download doesn't yet have a filename if we try to use the chrome.downloads.onCreated event, so this is the earliest point we have all of the information available to cancel the download.
 chrome.downloads.onDeterminingFilename.addListener(function(downloadItem, suggest) {
   var suggestion = {
     filename: downloadItem.filename,
@@ -139,8 +182,32 @@ chrome.downloads.onDeterminingFilename.addListener(function(downloadItem, sugges
 
   suggest(suggestion);
 
-  processDownload(downloadItem);
+  processDownload(downloadItem).then({});
 });
 
+//https://stackoverflow.com/questions/54821584/chrome-extension-code-to-get-current-active-tab-url-and-detect-any-url-update-in
+// Keep track of current tab URL, in order to correlate which URL is responsible for a download
 
+/*
+    Unfortunately due to a bug in Chromium V91, the code to keep track of the current URL can fail, so we have to wrap in a setTimeout call.
+    https://bugs.chromium.org/p/chromium/issues/detail?id=1213925
+*/
+function UpdateCurrentUrl(activeInfo) {
+  chrome.tabs.get(activeInfo.tabId, function(tab){
+    if (chrome.runtime.lastError) {
+      setTimeout(function(){UpdateCurrentUrl(activeInfo) }, 500); // arbitrary delay
+      return;
+    }
+    Utils.currentUrl = tab.url;
+  });
+}
 
+chrome.tabs.onActivated.addListener(function(activeInfo){    
+  UpdateCurrentUrl(activeInfo);
+});
+
+chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+if (tab.active && change.url) {
+    Utils.currentUrl = change.url;         
+}
+});
