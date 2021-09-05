@@ -10,6 +10,12 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+### 0.1.2
+
+* Fixed a bug which meant that using the 'fileExtensions' exception type caused an error preventing the download from being processed correctly.
+* The content script is better protected against tampering from a malicious webpage.
+* The extension can now detect and block binary office documents which contain macros, if they have been HTML Smuggled.
+
 ### 0.1.1
 * Added the 'notify' rule action. Rules with this action will notify the end user, as well as optionally sending an external alert, however the download will not be blocked.
 * Added the ability for the user-facing notification text to be customised by using the 'messageTemplate' property. This property can contain the same placeholders as the alert configuration. Applies to both 'block' and 'notify' rule actions.
@@ -49,6 +55,7 @@ The 'Config' value is a JSON object with the following schema:
             {
                 "bannedExtensions" : [],
                 "origin" : "local|server|any",
+                fileInspection: {"InspectionType": [true|false]},
                 "exceptions" : [
                     {
                         "type" : "hostname|baseDomain|fileExtensions",
@@ -74,19 +81,43 @@ The JSON data should be minified before setting the registry value, for example 
 
 **Note: It can take a while for Chrome to apply an updated policy. For testing purposes, you may need to go to chrome://policy or edge://policy to check if the policy has been loaded. You can also manually reload the policies via the 'Reload Policies' button. Note that Edge doesn't appear to display extension configuration settings, but they are actually still loaded.**
 
-### Banned Extensions
+### Banned Extensions (Required)
 
 The bannedExtensions object supports an array containing either:
 * The extensions to ban (Without the leading '.')
 * The wildcard operator ("*") 
 
-### Origin
+### Action (Optional, default = block)
+
+| Action Type     | Is the download blocked?         | Is the user notified?    | HTTP Alert Sent (If configured) |
+|-----------------|----------------------------------|--------------------------|---------------------------------|
+| block (default) | Yes                              | Yes                      | Yes                             |
+| audit           | No *                             | No *                     | Yes                             |
+| notify          | No                               | Yes                      | Yes                             |
+
+\* If audit mode is chosen, but no alert config is present, the extension will revert back to block mode.
+
+If multiple rules are matched, the first block rule takes precedence. An audit or notify rule will only be used if no block rules are matched.
+
+### Origin (Required)
 
 * Local - The file was downloaded via javascript
 * Server - The file is hosted via a web server
 * Any - Either of the above
 
-### Exceptions
+### File Inspection (Optional)
+
+For files which are created using HTML Smuggling, the extension can inspect them for certain properties. At present, the only detection is for office macros.
+
+If multiple insection types are specified, all values must match for the rule to match.
+
+To perform file inspection, use the **fileInspection** property in the rule.
+
+| Inspection Type | Description                                                                       |
+|-----------------|-----------------------------------------------------------------------------------|
+| macros          | True if the file is a binary office file and contains macros or Excel 4.0 macros  |
+
+### Exceptions (Optional)
 
 Each rule object optionally supports exceptions via the **exceptions** array. Each exception is made up of a type and a value.
 
@@ -99,23 +130,11 @@ Each rule object optionally supports exceptions via the **exceptions** array. Ea
 \
 When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 
-### Action
-
-| Action Type     | Is the download blocked?         | Is the user notified?    | HTTP Alert Sent (If configured) |
-|-----------------|----------------------------------|--------------------------|---------------------------------|
-| block (default) | Yes                              | Yes                      | Yes                             |
-| audit           | No *                             | No *                     | Yes                             |
-| notify          | No                               | Yes                      | Yes                             |
-
-\* If audit mode is chosen, but no alert config is present, the extension will revert back to block mode.
-
-If multiple rules are matched, the first block rule takes precedence. An audit or notify rule will only be used if no block rules are matched.
-
-### titleTemplate and messageTemplate
+### titleTemplate and messageTemplate (Optional)
 
 The **titleTemplate** and **messageTemplate** properties allow you to customise the toast notification sent to the user when a user is notified of a download or a download block. It supports the same template strings as the alert URL / post data.
 
-### Alerts
+### Alerts (Optional)
 
 *alertConfig is a global setting, not a per-rule setting.*
 
@@ -129,6 +148,7 @@ Both URL and the values contained in the postData property can contain the follo
 * {state} (Download state)
 * {action} (Rule action, block or audit)
 * {sha256} (Only for HTML Smuggled downloads)
+* {fileInspection} (Only for HTML Smuggled downloads)
 
 ## Example Configuration
 
@@ -137,13 +157,19 @@ Both URL and the values contained in the postData property can contain the follo
             {
                 "bannedExtensions" : ["*"],
                 "origin" : "local",
-                "action": "block"
+                "action": "audit"
+            },
+
+            {   
+                "bannedExtensions" : ["doc", "ppt", "xls"],
+                "origin" : "local",
+                "fileInspection": {"macros": true}
             },
 
             {
                 "bannedExtensions" : ["hta", "xbap"],
                 "origin" : "any",
-                "action": "audit"
+                "action": "block"
             }
 	    ],
 
@@ -159,7 +185,8 @@ Both URL and the values contained in the postData property can contain the follo
                 "sha256" : "{sha256}",
                 "time": "{timestamp}",
                 "action": "{action}",
-                "state" : "{state}"
+                "state" : "{state}",
+                "fileInspection" : "{fileInspection}"
             }
         } 
     }

@@ -34,6 +34,10 @@ class configuration{
             return false;
         }
 
+        if(rule.fileInspection && (!rule.fileInspection instanceof Object || Object.keys(rule.fileInspection).length == 0)){
+            return false;
+        }
+
         if(!["block", "audit", "notify"].includes(this.getRuleAction(rule))){
             return false;
         }
@@ -51,7 +55,7 @@ class configuration{
             const exception = rule.exceptions[exceptionIndex];
             
             var exceptionType = exception.type.toLowerCase();
-            var exceptionValue = exception.value.toLowerCase();
+            var exceptionValue = exception.value;
             
             if(!downloadItem.referringPage){
                 return false;
@@ -63,7 +67,7 @@ class configuration{
                 case "hostname":
                     return downloadHostname == exceptionValue.toLowerCase();
                 case "basedomain":
-                    return ('.' + downloadHostname).endsWith('.' + exceptionValue);
+                    return ('.' + downloadHostname).endsWith('.' + exceptionValue.toLowerCase());
                 case "fileextensions":
                     return this.isExtensionInList(exceptionValue, Utils.getFileExtension(downloadItem.filename));
                 default:
@@ -75,6 +79,20 @@ class configuration{
         return false;
     }
 
+    doesFileInspectionMatch(rule, downloadItem){
+
+        if(!downloadItem.fileInspectionData){
+            return false;
+        }
+
+        for(var key of Object.keys(rule.fileInspection)){
+            if ((!downloadItem.fileInspectionData[key]) || downloadItem.fileInspectionData[key] !== rule.fileInspection[key]){
+                return false;
+            }
+        }
+        return true;
+    }
+    
     doesDownloadMatchRule(rule, downloadItem){
         var fileExtension = Utils.getFileExtension(downloadItem.filename);
         
@@ -87,6 +105,11 @@ class configuration{
         var ruleOrigin = rule.origin.toLowerCase();
 
         if((ruleOrigin == "local" && !isJsDownload) || ruleOrigin == 'server' && isJsDownload){
+            return false;
+        }
+
+        if(rule.fileInspection && !this.doesFileInspectionMatch(rule, downloadItem)){
+            console.log("file inspection didn't match");
             return false;
         }
 
@@ -157,7 +180,12 @@ class configuration{
             }
         }
 
-        return await Utils.XhrRequest(url, this.alertConfig.method, headers, postData);
+        try{
+            return await Utils.XhrRequest(url, this.alertConfig.method, headers, postData);
+        }catch{
+            console.log("Error sending alert");
+            return false;
+        }
     }
 
     static async loadDefaultConfig(){

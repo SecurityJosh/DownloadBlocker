@@ -19,8 +19,8 @@ chrome.runtime.onMessage.addListener(
     // console.log(sender.tab ? "from a content script:" + sender.tab.url : "from the extension");
     console.log(request);
 
-    if (!downloadHashes[request.id] || downloadHashes[request.id].sha256 == "Pending"){
-      downloadHashes[request.id] = {"sha256" : request["sha256"], "initiatingPage" : request["initiatingPage"] };
+    if (!downloadHashes[request.id] || downloadHashes[request.id].sha256 == "Pending" || request.fileInspectionData){
+      downloadHashes[request.id] = {"sha256" : request["sha256"], "initiatingPage" : request["initiatingPage"], "fileInspectionData" : request["fileInspectionData"] };
     }
     sendResponse(true);
   }
@@ -60,6 +60,7 @@ function deleteSuccessfulDownload(downloadItem){
 
 function abortDownload(downloadItem){    
   if(downloadItem.state == "interrupted"){
+    console.log("state was interrupted");
     return;
   }
 
@@ -74,15 +75,16 @@ function abortDownload(downloadItem){
 function timer(ms) { return new Promise(res => setTimeout(res, ms)); }
 
 async function waitForFileHash(downloadItem){
-  while(downloadHashes[downloadItem.finalUrl] && downloadHashes[downloadItem.finalUrl].sha256 == "Pending"){
+  while(downloadHashes[downloadItem.finalUrl] && (downloadHashes[downloadItem.finalUrl].sha256 == "Pending" || !downloadHashes[downloadItem.finalUrl].fileInspectionData)){
     await timer(250);
   }
 
   var downloadDetails = downloadHashes[downloadItem.finalUrl];
 
   if(downloadDetails){
-    downloadItem.sha256 = downloadDetails.sha256;
-    downloadItem.referringPage = downloadDetails.initiatingPage
+    downloadItem.sha256 = downloadDetails.sha256 || downloadItem.sha256;
+    downloadItem.referringPage = downloadDetails.initiatingPage || downloadItem.referringPage;
+    downloadItem.fileInspectionData = downloadDetails.fileInspectionData || downloadItem.fileInspectionData;
     //delete downloadHashes[downloadItem.finalUrl];
   }
 }
@@ -101,9 +103,18 @@ async function processDownload(downloadItem){
   }
 
   console.log(filename);
-  console.log("Processing download with id: " + downloadItem.id);
+  console.log("Processing download with id: " + downloadItem.id + ", state is: " + downloadItem.state);
 
   downloadItem.referringPage = Utils.getCurrentUrl();
+
+  if(downloadHashes[downloadItem.finalUrl]){
+    let downloadHash = downloadHashes[downloadItem.finalUrl];
+
+    downloadItem.referringPage = downloadHash.initiatingPage || downloadItem.referringPage;
+    downloadItem.fileInspectionData = downloadHash.fileInspectionData || downloadItem.fileInspectionData;
+
+    console.log(downloadHash);
+  }
 
   var matchedRule = config.getMatchedRule(downloadItem);
 
@@ -116,15 +127,15 @@ async function processDownload(downloadItem){
 
   var ruleAction = config.getRuleAction(matchedRule);
   
-  downloadItem["action"] = ruleAction;
+  downloadItem["action"] = ruleAction; // For alerting purposes
 
-  var shouldBlockDownload = (ruleAction !== "audit") && (ruleAction !== "notify");
+  var shouldBlockDownload = !["audit", "notify"].includes(ruleAction);
 
-  if(shouldBlockDownload || ruleAction == "audit" && !config.getAlertConfig()){
+  if(shouldBlockDownload || (ruleAction == "audit" && !config.getAlertConfig())){
     if(shouldBlockDownload){
-      console.log("Action not set to audit, blocking download");
+      console.log("Action not set to audit or notify, blocking download");
     }else{
-      console.log("Action set to audit, but no alertConfig is specified, blocking download");
+      console.log("Action not set to audit or notify, but no alertConfig is specified, blocking download");
     }
     
     abortDownload(downloadItem);
@@ -136,7 +147,7 @@ async function processDownload(downloadItem){
   }else{
     if(ruleAction == "notify"){
 
-      if(downloadItem.state !== "complete"){
+      if(downloadItem.state == "in_progress"){
         console.log("Wait for download to finish before issuing notification");
         return;
       }
@@ -157,7 +168,6 @@ async function processDownload(downloadItem){
 
   console.log(downloadItem);
 }
-
 
 // onDeterminingFilename doesn't seem to trigger for files downloaded via CTRL + S, so we use .onChanged for these instances
 chrome.downloads.onChanged.addListener(function callback(downloadDelta){
