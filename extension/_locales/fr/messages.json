@@ -1,0 +1,46 @@
+{
+  "download_blocked_message_title": {
+    "message": "Téléchargement bloqué",
+    "description": "The title of the message shown to the user when a download is blocked"
+  },
+  "download_notify_message_title": {
+    "message": "Téléchargement détecté",
+    "description": "The title of the message shown to the user when a download is detected"
+  },
+  "download_blocked_message_body": {
+    "message": "Le téléchargement de $filename$ depuis $url$ a été bloqué. Lien de téléchagement: $fileUrl$",
+    "description": "The body of the message shown to the user when a download is blocked",
+    "placeholders": {
+      "filename": {
+        "content": "$1",
+        "example": "payslip.hta"
+      },
+       "url": {
+        "content": "$2",
+        "example": "https://example.com/test.html"
+      },
+      "fileUrl": {
+       "content": "$3",
+       "example": "https://example.com/payslip.hta"
+     }
+    }
+  },
+  "download_notify_message_body": {
+    "message": "Le téléchargement de $filename$ depuis $url$ a été détecté. Lien de téléchagement: $fileUrl$",
+    "description": "The body of the message shown to the user when a download is detected",
+    "placeholders": {
+      "filename": {
+        "content": "$1",
+        "example": "payslip.hta"
+      },
+       "url": {
+        "content": "$2",
+        "example": "https://example.com/test.html"
+      },
+      "fileUrl": {
+       "content": "$3",
+       "example": "https://example.com/payslip.hta"
+     }
+    }
+  }
+}
