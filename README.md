@@ -12,7 +12,7 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ### 0.1.3
 
-* Added French languaged support (Thanks [InformatiqueOLLN](https://github.com/SecurityJosh/DownloadBlocker/pull/5/commits/3621b331596394e928ac312fdc33560a7981593b))
+* Added French language support (Thanks [InformatiqueOLLN](https://github.com/SecurityJosh/DownloadBlocker/pull/5/commits/3621b331596394e928ac312fdc33560a7981593b))
 
 ### 0.1.2
 
