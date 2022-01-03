@@ -6,8 +6,14 @@ var downloadHashes = {};
 chrome.storage.managed.get(managedConfig => {
   if (managedConfig.Config){
     console.log("Found managed config");
-    config = new configuration(JSON.parse(managedConfig.Config));
-  }else{
+    try{
+      config = new configuration(JSON.parse(managedConfig.Config));
+    }catch{
+      console.log("Got JSON error when trying to parse configuration")
+    }
+  }
+  
+  if(!config){
     console.log("Didn't find managed config, using default.")
     configuration.loadDefaultConfig().then(defaultConfig => config = defaultConfig);
   }
@@ -122,6 +128,9 @@ async function processDownload(downloadItem){
     console.log("Download didn't match any rules")
     return;
   }
+
+  console.log("Matched rule:");
+  console.log(matchedRule);
 
   // Default to block except where action is set explicitly to something else
 

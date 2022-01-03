@@ -1,20 +1,18 @@
 
 // https://stackoverflow.com/a/9517879
-function injectScript(scriptBody){
+function injectScript(scriptId, scriptBody){
     var script = document.createElement('script');
     script.setAttribute("type", "text/javascript");
+    script.setAttribute("id", scriptId);
     script.textContent = scriptBody;
 
     (document.head||document.documentElement).appendChild(script);
-
-    script.onload = function() {
-        script.parentNode.removeChild(script);
-    };
 }
 
 var onHashReceived = function(e){
-    if(!chrome.runtime){
+    if(!(chrome.runtime?.id)){
         console.log("chrome runtime null");
+        // https://stackoverflow.com/a/69603416
         // chrome.runtime can be null in this callback if the extension has been updated since the page was initially loaded.
         return;
     }
@@ -31,7 +29,7 @@ var onHashReceived = function(e){
 
 
 const eventId = 'kippogcnigegkjidkpfpaeimabcoboak_Hash';
-
+const scriptId = 'kippogcnigegkjidkpfpaeimabcoboak_Script';
 document.addEventListener(eventId, onHashReceived);
 
 // This script gets injected into the webpage. It allows us to hook the necessary functions to be able to calculate the SHA256 of the file to be downloaded, and to perform file inspection capabilities.
@@ -39,7 +37,7 @@ document.addEventListener(eventId, onHashReceived);
 
 // Unfortunately, the script doesn't load quickly enough when it is loaded asynchronously, meaning we need to manually inject the source.
 
-injectScript(`
+injectScript(scriptId, `
 // https://stackoverflow.com/a/61207836
 
 const DownloadBlocker = (function () {
@@ -222,18 +220,10 @@ const DownloadBlocker = (function () {
         return doesFileHaveOfficeMacros(fileBytes) || doesFileHaveExcel4Macros(fileBytes);
     }
     // == End file inspection functions ==
-    
-    // Return a class which can be used to provide limited interacitivty with the DownloadBlocker functionality
-    class DownloadBlocker {
+
+    while(scriptElement = document.getElementById('${scriptId}')){
+        scriptElement.parentNode.removeChild(scriptElement);
     }
 
-    return DownloadBlocker;
 }());
 `);
-
-/*
-class DownloadBlocker {    
-    static get digestToHex() {
-        return digestToHex;
-    }
-*/

@@ -79,6 +79,20 @@ class configuration{
         return false;
     }
 
+    doesFileNameRegexMatch(rule, downloadItem){
+        if (!downloadItem.filename){
+            return false;
+        }
+
+        try{
+            var regex = new RegExp(rule.fileNameRegex);
+            return regex.test(downloadItem.filename);
+        }catch{
+            console.log(`Failed to compile regex '${rule.fileNameRegex}'`);
+            return false;
+        }
+    }
+
     doesFileInspectionMatch(rule, downloadItem){
 
         if(!downloadItem.fileInspectionData){
@@ -110,6 +124,10 @@ class configuration{
 
         if(rule.fileInspection && !this.doesFileInspectionMatch(rule, downloadItem)){
             console.log("file inspection didn't match");
+            return false;
+        }
+
+        if(rule.fileNameRegex && !this.doesFileNameRegexMatch(rule, downloadItem)){
             return false;
         }
 

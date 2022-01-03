@@ -10,6 +10,13 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+### 0.1.4
+
+* Fixed bug which meant that the injected content script wasn't removed from the DOM.
+* Added the 'fileNameRegex' configuration filter to block downloads based on a specified filename pattern.
+* The extension will now fall back to the default configuration if the managed config fails to parse correctly.
+* Testing fix for error when a stale content script attempts communication with the extension after an extension upgrade.
+
 ### 0.1.3
 
 * Added French language support (Thanks [InformatiqueOLLN](https://github.com/SecurityJosh/DownloadBlocker/pull/5/commits/3621b331596394e928ac312fdc33560a7981593b))
@@ -89,7 +96,17 @@ The JSON data should be minified before setting the registry value, for example 
 
 The bannedExtensions object supports an array containing either:
 * The extensions to ban (Without the leading '.')
-* The wildcard operator ("*") 
+* The wildcard operator ("*")
+
+### Origin (Required)
+
+* Local - The file was downloaded via javascript
+* Server - The file is hosted via a web server
+* Any - Either of the above
+
+### fileNameRegex (Optional)
+
+The fileNameRegex property allows you to filter for file names that match a given regex pattern. The pattern is tested against the whole file name, including extension. Be aware that you will need to double-escape any backslashes in your regex string so that the JSON remains valid.
 
 ### Action (Optional, default = block)
 
@@ -103,23 +120,18 @@ The bannedExtensions object supports an array containing either:
 
 If multiple rules are matched, the first block rule takes precedence. An audit or notify rule will only be used if no block rules are matched.
 
-### Origin (Required)
-
-* Local - The file was downloaded via javascript
-* Server - The file is hosted via a web server
-* Any - Either of the above
-
 ### File Inspection (Optional)
 
 For files which are created using HTML Smuggling, the extension can inspect them for certain properties. At present, the only detection is for office macros.
 
-If multiple insection types are specified, all values must match for the rule to match.
+If multiple inspection types are specified, all values must match for the rule to match.
 
 To perform file inspection, use the **fileInspection** property in the rule.
 
 | Inspection Type | Description                                                                       |
 |-----------------|-----------------------------------------------------------------------------------|
 | macros          | True if the file is a binary office file and contains macros or Excel 4.0 macros  |
+
 
 ### Exceptions (Optional)
 
@@ -131,7 +143,6 @@ Each rule object optionally supports exceptions via the **exceptions** array. Ea
 | basedomain     | Hostname and any subdomain match | String           | "example.com"                   |
 | fileExtensions | File extensions match            | Array of strings | ["txt", "csv"]                  |
 
-\
 When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 
 ### titleTemplate and messageTemplate (Optional)
