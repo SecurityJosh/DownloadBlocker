@@ -42,7 +42,7 @@ injectScript(scriptId, `
 
 const DownloadBlocker = (function () {
     const _createObjectURL = window.URL.createObjectURL;
-    const _Blob = window.Blob;
+    const URL = window.location.href;
     const _dispatchEvent = document.dispatchEvent.bind(document); // https://stackoverflow.com/a/10743608
 
     // Hook event dispatch to prevent unauthorized calls
@@ -53,20 +53,8 @@ const DownloadBlocker = (function () {
         _dispatchEvent(event);
     }
 
-    /**
-    // Hook Blob creation
-    window.Blob = function(array, options) {
-
-        var blob = new _Blob(array, options);        
-
-        return blob;
-    };
-    window.Blob.prototype =  _Blob.prototype;
-    **/
-
     // Hook createObjectURL
     window.URL.createObjectURL = function(obj){
-            
         let url =  _createObjectURL(obj);
 
         // createObjectURL supports File, Blob and MediaSource objects. We're not interested in the latter. 

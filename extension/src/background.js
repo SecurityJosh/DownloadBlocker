@@ -111,7 +111,8 @@ async function processDownload(downloadItem){
   console.log(filename);
   console.log("Processing download with id: " + downloadItem.id + ", state is: " + downloadItem.state);
 
-  downloadItem.referringPage = Utils.getCurrentUrl();
+  // Utils.getCurrentUrl uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
+  downloadItem.referringPage = downloadItem.referringPage || Utils.getCurrentUrl();
 
   if(downloadHashes[downloadItem.finalUrl]){
     let downloadHash = downloadHashes[downloadItem.finalUrl];
@@ -152,7 +153,6 @@ async function processDownload(downloadItem){
     var title = Utils.parseString(matchedRule.titleTemplate, downloadItem) || chrome.i18n.getMessage("download_blocked_message_title");
     var message = Utils.parseString(matchedRule.messageTemplate, downloadItem) || chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, downloadItem.referringPage, downloadItem.finalUrl]);
     Utils.notifyUser(title, message);
-
   }else{
     if(ruleAction == "notify"){
 

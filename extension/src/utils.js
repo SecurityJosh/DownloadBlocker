@@ -11,8 +11,9 @@ var Utils = {
         var notificationOptions = {
           type: "basic",
           iconUrl: "/icons/icon128.png",
-          title: title,
-          message: message
+          /* Restrict the length of the title and message, chrome silently fails to show the message if the combined length is greater than (in my testing) 4340 characters, which can happen with long data: URLs.  */
+          title: title.length > 200 ? title.substr(0, 200) + "..." : title,
+          message: message.length > 200 ? message.substr(0, 200) + "..." : message,
         };
         
         chrome.notifications.create(Utils.generateUuid(), notificationOptions);
@@ -47,7 +48,7 @@ var Utils = {
             }
 
             xhr.onload = function () {
-                if (xhr.responseText) {
+                if (xhr.status && xhr.status >= 200 && xhr.status < 300) {
                     resolve(xhr.responseText);
                 } else {
                     reject({
@@ -70,7 +71,7 @@ var Utils = {
         if(!template){
             return null;
         }
-        return template.replaceAll("{fileInspection}", JSON.stringify(downloadItem.fileInspectionData)).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
+        return template.replaceAll("{ruleName}", downloadItem.ruleName).replaceAll("{fileInspection}", JSON.stringify(downloadItem.fileInspectionData)).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
 
     },
 
@@ -86,6 +87,6 @@ var Utils = {
     },
 
     parseUrl(url, downloadItem){
-        return url.replaceAll("{fileInspection}", downloadItem.fileInspectionData).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
+        return  url.replaceAll("{ruleName}", encodeURIComponent(downloadItem.ruleName)).replaceAll("{fileInspection}", encodeURIComponent(JSON.stringify(downloadItem.fileInspectionData))).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", encodeURIComponent(downloadItem.referringPage)).replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
     }
 }

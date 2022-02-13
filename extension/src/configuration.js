@@ -34,6 +34,10 @@ class configuration{
             return false;
         }
 
+        if(rule.urlScheme && !Array.isArray(rule.urlScheme)){
+            return false;
+        }
+
         if(rule.fileInspection && (!rule.fileInspection instanceof Object || Object.keys(rule.fileInspection).length == 0)){
             return false;
         }
@@ -131,6 +135,17 @@ class configuration{
             return false;
         }
 
+        if(rule.urlScheme){
+
+            var ruleUrlScheme = rule.urlScheme.map(x => x.toLowerCase());
+
+            var urlScheme = new URL(downloadItem.referringPage).protocol.slice(0, -1).toLowerCase(); // e.g. file, http, https instead of file:, http:, https:
+
+            if(!ruleUrlScheme.includes(urlScheme)){
+                return false;
+            }
+        } 
+
         if(this.doesExceptionExist(rule, downloadItem)){
             console.log("exception found");
             return false;
@@ -148,7 +163,6 @@ class configuration{
         return rule.action.toLowerCase();
     }
 
-
     getMatchedRule(downloadItem){
 
         var matchedRule = null;
@@ -158,6 +172,8 @@ class configuration{
         
             if(this.doesDownloadMatchRule(rule, downloadItem)){
                 
+                downloadItem.ruleName = rule.ruleName ?? "";
+
                 if(this.getRuleAction(rule) == "block"){
                     return rule;
                 }
@@ -200,7 +216,8 @@ class configuration{
 
         try{
             return await Utils.XhrRequest(url, this.alertConfig.method, headers, postData);
-        }catch{
+        }catch(e){
+            console.log(e);
             console.log("Error sending alert");
             return false;
         }

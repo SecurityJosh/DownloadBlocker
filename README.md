@@ -4,11 +4,18 @@ Chrome web store link: https://chrome.google.com/webstore/detail/download-blocke
 
 ## What is it?
 
-Download Blocker is a Google Chrome extension which blocks certain files from being downloaded, based on their extension / origin. It was created as a way to prevent HTML smuggling attacks, but it can also block downloads from webservers too.
+Download Blocker is a Google Chrome extension which blocks certain files from being downloaded, based on a number of diffent data / metadata properties. It was created as a way to prevent HTML smuggling attacks, but it can also block downloads from webservers too.
 
-HTML smuggling is essentially a technique for bypassing web-proxies / firewalls that detect executable content being downloaded from a server. It does this by using HTML5 APIs to provide a download purely using javascript, without making a request to a webserver. For an in-depth description of HTML smuggling, please see the references below.
+HTML smuggling is essentially a technique for bypassing web-proxies / firewalls that perform content inspection on files downloaded from a server. It does this by using HTML5 APIs to provide a client-side download using javascript, without making a request to a webserver. For an in-depth description of HTML smuggling, please see the references below.
 
 ## Change Log
+
+### 0.1.5
+* Fixed bug which meant an empty response from the server when sending an alert was handled as an error.
+* Added 'ruleName' config parameter to aid identifying which rule triggered an action.
+* Fixed parameters not being encoded properly when used in an alert URL.
+* Added the 'urlScheme' configuration filter to block downloads based on the URL scheme of the referring page. (e.g. file, http, https)
+* Fix for an oversight which may have caused the inferred URL to take precedence over the one provided by the webpage. (See 0.1.0)
 
 ### 0.1.4
 
@@ -26,6 +33,8 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 * Fixed a bug which meant that using the 'fileExtensions' exception type caused an error preventing the download from being processed correctly.
 * The content script is better protected against tampering from a malicious webpage.
 * The extension can now detect and block binary office documents which contain macros, if they have been HTML Smuggled.
+
+    **N.B. Unless "Allow access to file URLs" has been enabled for the extension, macro detection will not work for downloads via a file:// origin.**
 
 ### 0.1.1
 * Added the 'notify' rule action. Rules with this action will notify the end user, as well as optionally sending an external alert, however the download will not be blocked.
@@ -64,7 +73,10 @@ The 'Config' value is a JSON object with the following schema:
     {
         "rules" : [
             {
+                ruleName : ""
                 "bannedExtensions" : [],
+                "urlScheme" : ["file", "http", "https", "etc."],
+                "fileNameRegex" : "",
                 "origin" : "local|server|any",
                 fileInspection: {"InspectionType": [true|false]},
                 "exceptions" : [
@@ -94,21 +106,40 @@ The JSON data should be minified before setting the registry value, for example 
 
 ### Banned Extensions (Required)
 
-The bannedExtensions object supports an array containing either:
+The bannedExtensions property supports an array containing either:
 * The extensions to ban (Without the leading '.')
 * The wildcard operator ("*")
 
 ### Origin (Required)
 
+Property name: origin
+
 * Local - The file was downloaded via javascript
 * Server - The file is hosted via a web server
 * Any - Either of the above
 
+### ruleName (Optional)
+
+The ruleName property is simply an identifier which can be used in the alert config or message template fields. It's useful to help pinpoint which rule has triggered.
+
+### urlScheme (Optional)
+
+Property name: urlScheme (Array)
+
+This property is intended to used in combination with an origin = Local filter. When used in this way, the urlScheme filter can be used to block downloads based on their url protocol, e.g file, http, https etc..
+
+This can be used, for example, to block all HTML Smuggled downloads which originate from a local webpage on the user's computer. (e.g. via an email attachment) Since Chrome can't, by default, run content scripts in these local webpages, a rule which blocks files based on content inspection won't work for these files. This property allows you to blanket ban these files which can't be inspected.
+
+
 ### fileNameRegex (Optional)
+
+Property name: fileNameRegex
 
 The fileNameRegex property allows you to filter for file names that match a given regex pattern. The pattern is tested against the whole file name, including extension. Be aware that you will need to double-escape any backslashes in your regex string so that the JSON remains valid.
 
 ### Action (Optional, default = block)
+
+Property name: action
 
 | Action Type     | Is the download blocked?         | Is the user notified?    | HTTP Alert Sent (If configured) |
 |-----------------|----------------------------------|--------------------------|---------------------------------|
@@ -122,11 +153,11 @@ If multiple rules are matched, the first block rule takes precedence. An audit o
 
 ### File Inspection (Optional)
 
-For files which are created using HTML Smuggling, the extension can inspect them for certain properties. At present, the only detection is for office macros.
+Property name: fileInspection
+
+For files which are created using HTML Smuggling, the extension can inspect them for certain properties. At present, the only detection is for macros in binary office documents (i.e. .docm .ppt, .xls).
 
 If multiple inspection types are specified, all values must match for the rule to match.
-
-To perform file inspection, use the **fileInspection** property in the rule.
 
 | Inspection Type | Description                                                                       |
 |-----------------|-----------------------------------------------------------------------------------|
@@ -134,6 +165,8 @@ To perform file inspection, use the **fileInspection** property in the rule.
 
 
 ### Exceptions (Optional)
+
+Property name: exceptions
 
 Each rule object optionally supports exceptions via the **exceptions** array. Each exception is made up of a type and a value.
 
@@ -147,7 +180,7 @@ When downloading a file via JS, hostname is the hostname of the page the downloa
 
 ### titleTemplate and messageTemplate (Optional)
 
-The **titleTemplate** and **messageTemplate** properties allow you to customise the toast notification sent to the user when a user is notified of a download or a download block. It supports the same template strings as the alert URL / post data.
+The **titleTemplate** and **messageTemplate** properties allow you to customise the toast notification sent to the user when a user is notified of a download or a download block. It supports the same template strings as the alert URL / post data (See below).
 
 ### Alerts (Optional)
 
@@ -160,6 +193,7 @@ Both URL and the values contained in the postData property can contain the follo
 * {fileUrl}
 * {filename}
 * {timestamp}
+* {ruleName}
 * {state} (Download state)
 * {action} (Rule action, block or audit)
 * {sha256} (Only for HTML Smuggled downloads)
@@ -199,6 +233,7 @@ Both URL and the values contained in the postData property can contain the follo
                 "url" : "{url}",
                 "sha256" : "{sha256}",
                 "time": "{timestamp}",
+                "ruleName" : "{ruleName}",
                 "action": "{action}",
                 "state" : "{state}",
                 "fileInspection" : "{fileInspection}"
@@ -243,9 +278,9 @@ You will need to minify this JSON. [This](https://mythic-byway-180716.appspot.co
 
 For Microsoft Edge on Windows, extensions from outside the Microsoft Extension Store can only be force-installed from a domain-joined / managed device system.
 
-## Block Notification
+## End User Notification
 
-Users are notified of their downloads being blocked via a browser notification:
+When the triggering rule action is set to block or notify, users will received a browser notification when a download is detected / blocked:
 
 ![Block Notification](https://github.com/SecurityJosh/DownloadBlocker/raw/master/notification.png)
 
