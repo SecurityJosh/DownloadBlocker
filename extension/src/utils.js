@@ -71,7 +71,7 @@ var Utils = {
         if(!template){
             return null;
         }
-        return template.replaceAll("{ruleName}", downloadItem.ruleName).replaceAll("{fileInspection}", JSON.stringify(downloadItem.fileInspectionData)).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
+        return template.replaceAll("{ruleName}", downloadItem.ruleName).replaceAll("{fileInspection}", JSON.stringify(downloadItem.fileInspectionData)).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.parse(downloadItem.startTime)).replaceAll("{sha256}", downloadItem.sha256);
 
     },
 
@@ -87,6 +87,6 @@ var Utils = {
     },
 
     parseUrl(url, downloadItem){
-        return  url.replaceAll("{ruleName}", encodeURIComponent(downloadItem.ruleName)).replaceAll("{fileInspection}", encodeURIComponent(JSON.stringify(downloadItem.fileInspectionData))).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", encodeURIComponent(downloadItem.referringPage)).replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.now()).replaceAll("{sha256}", downloadItem.sha256);
+        return  url.replaceAll("{ruleName}", encodeURIComponent(downloadItem.ruleName)).replaceAll("{fileInspection}", encodeURIComponent(JSON.stringify(downloadItem.fileInspectionData))).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", encodeURIComponent(downloadItem.referringPage)).replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.parse(downloadItem.startTime)).replaceAll("{sha256}", downloadItem.sha256);
     }
 }

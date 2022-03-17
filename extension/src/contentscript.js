@@ -1,4 +1,3 @@
-
 // https://stackoverflow.com/a/9517879
 function injectScript(scriptId, scriptBody){
     var script = document.createElement('script');
@@ -11,7 +10,6 @@ function injectScript(scriptId, scriptBody){
 
 var onHashReceived = function(e){
     if(!(chrome.runtime?.id)){
-        console.log("chrome runtime null");
         // https://stackoverflow.com/a/69603416
         // chrome.runtime can be null in this callback if the extension has been updated since the page was initially loaded.
         return;
@@ -89,15 +87,21 @@ const DownloadBlocker = (function () {
                 if (element.tagName.toLowerCase() == "a" && element.hasAttribute("download")){
                     
                     // e.g. 'data:text/something;charset=utf-8,fileContent'
-                    const regularExpression = /(data:[A-Za-z]+\\\/[A-Za-z]+;)(charset=[A-Za-z-\\d]+,)(.*)$/;
-                        
+                    //const regularExpression = /(data:[A-Za-z]+\\\/[A-Za-z]+;)(charset=[A-Za-z-\\d]+,)(.*)$/;
+                    const regularExpression = /(data:[A-Za-z]+\\\/[A-Za-z]+;)(charset=[A-Za-z-\\d]+)(;base64)?,(.*)$/i;    
                     if(regularExpression.test(element.href)){
                         let results = regularExpression.exec(element.href)
-            
-                        let downloadData = decodeURIComponent(results[3]); // Blindly assume that the downloadData is urlEncoded?
+                        
+                        let downloadData = results[4];
+
+                        if(results[3] != null){ // results[3] == ;base64
+                            downloadData = atob(downloadData);
+                        }else{
+                            downloadData = decodeURIComponent(downloadData); // Blindly assume that the downloadData is urlEncoded?
+                        }
                             
                         let encoded = new TextEncoder().encode(downloadData);
-                        
+
                         processHash(element.href, window.location.href, "Pending");
 
                         crypto.subtle.digest("SHA-256", encoded).then(digest => {

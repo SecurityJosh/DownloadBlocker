@@ -49,6 +49,43 @@ class configuration{
         return true;
     }
 
+    checkException(exception, downloadItem){
+        var exceptionType = exception.type.toLowerCase();
+        var exceptionValue = exception.value;
+            
+        if(!downloadItem.referringPage){
+            console.log("No referringPage");
+            return false;
+        }
+
+        var downloadHostname = new URL(downloadItem.referringPage).hostname.toLowerCase();
+
+        switch(exceptionType){
+            case "hostname":
+            case "basedomain":
+                let domainMatch = (downloadHostname, exceptionType, exceptionValue) => {
+                    let funcs = {
+                        "hostname" : (downloadHostname, exceptionValue) => downloadHostname == exceptionValue.toLowerCase(),
+                        "basedomain" : (downloadHostname, exceptionValue) => ('.' + downloadHostname).endsWith('.' + exceptionValue.toLowerCase())
+                    };
+
+                    return funcs[exceptionType](downloadHostname, exceptionValue);
+                };
+
+                if(Array.isArray(exceptionValue)){
+                    return exceptionValue.some(x => domainMatch(downloadHostname, exceptionType, x));
+                }
+
+                return domainMatch(downloadHostname, exceptionType, exceptionValue);
+
+            case "fileextensions":
+                return this.isExtensionInList(exceptionValue, Utils.getFileExtension(downloadItem.filename));
+            default:
+                console.log(`exceptionType: '${exceptionType}' was not recognised. Value given: '${exceptionValue}'`);
+                return false;
+        }
+    }
+
     doesExceptionExist(rule, downloadItem){
 
         if(!rule.exceptions){
@@ -57,27 +94,10 @@ class configuration{
 
         for (let exceptionIndex = 0; exceptionIndex < rule.exceptions.length; exceptionIndex++) {
             const exception = rule.exceptions[exceptionIndex];
-            
-            var exceptionType = exception.type.toLowerCase();
-            var exceptionValue = exception.value;
-            
-            if(!downloadItem.referringPage){
-                return false;
-            }
 
-            var downloadHostname = new URL(downloadItem.referringPage).hostname;
-
-            switch(exceptionType){
-                case "hostname":
-                    return downloadHostname == exceptionValue.toLowerCase();
-                case "basedomain":
-                    return ('.' + downloadHostname).endsWith('.' + exceptionValue.toLowerCase());
-                case "fileextensions":
-                    return this.isExtensionInList(exceptionValue, Utils.getFileExtension(downloadItem.filename));
-                default:
-                    console.log(`exceptionType: '${exceptionType}' was not recognised. Value given: '${exceptionValue}'`);
-                    return false;
-            }
+            if(this.checkException(exception, downloadItem)){
+                return true;
+            }  
         }
 
         return false;
