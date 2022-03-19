@@ -58,18 +58,23 @@ class configuration{
             return false;
         }
 
-        var downloadHostname = new URL(downloadItem.referringPage).hostname.toLowerCase();
+        // If the download is HTML smuggled, use the referring page, otherwise use the file URL.
+        var downloadHostname = new URL(Utils.isJsDownload(downloadItem) ? downloadItem.referringPage : downloadItem.finalUrl).hostname.toLowerCase();
 
         switch(exceptionType){
             case "hostname":
             case "basedomain":
+            case "referrerhostname":
+            case "referrerbasedomain":
                 let domainMatch = (downloadHostname, exceptionType, exceptionValue) => {
                     let funcs = {
-                        "hostname" : (downloadHostname, exceptionValue) => downloadHostname == exceptionValue.toLowerCase(),
-                        "basedomain" : (downloadHostname, exceptionValue) => ('.' + downloadHostname).endsWith('.' + exceptionValue.toLowerCase())
+                        "hostname" : (downloadItem, downloadHostname, exceptionValue) => downloadHostname == exceptionValue.toLowerCase(),
+                        "basedomain" : (downloadItem, downloadHostname, exceptionValue) => ('.' + downloadHostname).endsWith('.' + exceptionValue.toLowerCase()),
+                        "referrerhostname" : (downloadItem, downloadHostname, exceptionValue) => (downloadItem.referrer ?? downloadItem.referringPage) == exceptionValue.toLowerCase(),
+                        "referrerbasedomain" : (downloadItem, downloadHostname, exceptionValue) => ('.' + (downloadItem.referrer ?? downloadItem.referringPage)).endsWith('.' + exceptionValue.toLowerCase()),
                     };
 
-                    return funcs[exceptionType](downloadHostname, exceptionValue);
+                    return funcs[exceptionType](downloadItem, downloadHostname, exceptionValue);
                 };
 
                 if(Array.isArray(exceptionValue)){

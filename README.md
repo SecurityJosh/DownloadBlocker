@@ -10,6 +10,10 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+### 0.1.7
+* Fixed bug which meant that when exceptions of non-smuggled downloads were being checked, it was the referrer URL that was being checked instead of the download URL.
+* Added the 'referrerhostname' and 'referrerbasedomain' exception types in-case the behavior above was desireable.
+
 ### 0.1.6
 * The 'hostname' and 'basedomain' exception types now support arrays as well as strings.
 * Fixed bug which meant that only the first exception in a rule was actually checked.
@@ -137,11 +141,13 @@ Property name: exceptions
 
 Each rule object optionally supports exceptions via the **exceptions** array. Each exception is made up of a type and a value.
 
-| Exception Type | Description                      | Expected Type                                                | Example Value                   |
-|----------------|----------------------------------|--------------------------------------------------------------|---------------------------------|
-| hostname       | Exact Hostname match             | String (< 0.1.6)<br>String or Array of strings (>= 0.1.6)    | "specificsubdomain.example.com"<br>["a.example.com", "b.example.com"] |
-| basedomain     | Hostname and any subdomain match | String (< 0.1.6)<br>String or Array of strings (>= 0.1.6)    | "example1.com"<br>["example1.com", "example2.com"]            |
-| fileExtensions | File extensions match            | Array of strings                                             | ["txt", "csv"]                  |
+| Exception Type     | Description                                 | Expected Type                                                | Example Value                   |
+|--------------------|---------------------------------------------|--------------------------------------------------------------|---------------------------------|
+| hostname           | Exact Hostname match                        | String (< 0.1.6)<br>String or Array of strings (>= 0.1.6)    | "specificsubdomain.example.com"<br>["a.example.com", "b.example.com"]        |
+| basedomain         | Hostname and any subdomain match            | String (< 0.1.6)<br>String or Array of strings (>= 0.1.6)    | "example1.com"<br>["example1.com", "example2.com"]                |
+| fileExtensions     | File extensions match                       | Array of strings                                             | ["txt", "csv"]                  |
+| referrerhostname   | Exact Hostname match (Referrer)             | String or Array of strings   | "specificsubdomain.example.com"<br>["a.example.com", "b.example.com"] |
+| referrerbasedomain | Hostname and any subdomain match (Referrer) | String or Array of strings   | "example1.com"<br>["example1.com", "example2.com"]                |
 
 When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
 

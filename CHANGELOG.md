@@ -1,5 +1,9 @@
 ## Change Log
 
+### 0.1.7
+* Fixed bug which meant that when exceptions of non-smuggled downloads were being checked, it was the referrer URL that was being checked instead of the download URL.
+* Added the 'referrerhostname' and 'referrerbasedomain' exception types in-case the behavior above was desireable.
+
 ### 0.1.6
 * The 'hostname' and 'basedomain' exception types now support arrays as well as strings.
 * Fixed bug which meant that only the first exception in a rule was actually checked.
