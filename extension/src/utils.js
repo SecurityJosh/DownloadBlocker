@@ -19,8 +19,11 @@ var Utils = {
         chrome.notifications.create(Utils.generateUuid(), notificationOptions);
     },
 
-    getCurrentUrl(){
-        return Utils.currentUrl;
+    generateGuid(){
+        // https://stackoverflow.com/a/2117523
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/\d/g, c =>
+          (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
     },
 
     getFileExtension(filename){
@@ -38,40 +41,20 @@ var Utils = {
       },
 
       // https://stackoverflow.com/a/48969580
-      XhrRequest(url, method = 'GET', headers = {}, postData = null) {
-        return new Promise(function (resolve, reject) {
-            let xhr = new XMLHttpRequest();
-            xhr.open(method, url);
+      async XhrRequest(url, method = 'GET', headers = {}, postData = null) {
 
-            for(let key in headers){
-                xhr.setRequestHeader(key, headers[key]) 
-            }
-
-            xhr.onload = function () {
-                if (xhr.status && xhr.status >= 200 && xhr.status < 300) {
-                    resolve(xhr.responseText);
-                } else {
-                    reject({
-                        status: this.status,
-                        statusText: xhr.statusText
-                    });
-                }
-            };
-            xhr.onerror = function () {
-                reject({
-                    status: this.status,
-                    statusText: xhr.statusText
-                });
-            };
-            xhr.send(postData);
+        return await fetch(url, {
+            "method" : method,
+            "headers" : headers,
+            "body" : postData
         });
     },
 
     parseString(template, downloadItem){
         if(!template){
-            return null;
+            return "";
         }
-        return template.replaceAll("{ruleName}", downloadItem.ruleName).replaceAll("{fileInspection}", JSON.stringify(downloadItem.fileInspectionData)).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.parse(downloadItem.startTime)).replaceAll("{sha256}", downloadItem.sha256);
+        return template.replaceAll("{ruleName}", downloadItem.ruleName).replaceAll("{fileInspection}", JSON.stringify(downloadItem.fileInspectionData) ?? "").replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", downloadItem.referringPage).replaceAll("{fileUrl}", downloadItem.finalUrl).replaceAll("{filename}", downloadItem.filename).replaceAll("{timestamp}", Date.parse(downloadItem.startTime)).replaceAll("{sha256}", downloadItem.sha256 ?? "");
 
     },
 
@@ -87,6 +70,6 @@ var Utils = {
     },
 
     parseUrl(url, downloadItem){
-        return  url.replaceAll("{ruleName}", encodeURIComponent(downloadItem.ruleName)).replaceAll("{fileInspection}", encodeURIComponent(JSON.stringify(downloadItem.fileInspectionData))).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", encodeURIComponent(downloadItem.referringPage)).replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.parse(downloadItem.startTime)).replaceAll("{sha256}", downloadItem.sha256);
+        return  url.replaceAll("{ruleName}", encodeURIComponent(downloadItem.ruleName)).replaceAll("{fileInspection}", encodeURIComponent(JSON.stringify(downloadItem.fileInspectionData) ?? "")).replaceAll("{state}", downloadItem.state).replaceAll("{action}", downloadItem.action).replaceAll("{url}", encodeURIComponent(downloadItem.referringPage)).replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl)).replaceAll("{filename}", encodeURIComponent(downloadItem.filename)).replaceAll("{timestamp}", Date.parse(downloadItem.startTime)).replaceAll("{sha256}", downloadItem.sha256 ?? "");
     }
 }

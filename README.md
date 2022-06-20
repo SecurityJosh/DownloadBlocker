@@ -10,9 +10,15 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+### 0.2.0
+* Migrated the extension to MV3.
+
+### 0.1.8
+* Smuggled files which are delivered via iframes with data: URLs are now content-inspected and will have their file-hash calculated.
+
 ### 0.1.7
 * Fixed bug which meant that when exceptions of non-smuggled downloads were being checked, it was the referrer URL that was being checked instead of the download URL.
-* Added the 'referrerhostname' and 'referrerbasedomain' exception types in-case the behavior above was desireable.
+* Added the 'referrerhostname' and 'referrerbasedomain' exception types in-case this behavior is desireable.
 
 ### 0.1.6
 * The 'hostname' and 'basedomain' exception types now support arrays as well as strings.
@@ -159,16 +165,24 @@ The **titleTemplate** and **messageTemplate** properties allow you to customise 
 
 *alertConfig is a global setting, not a per-rule setting.*
 
-**alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system. For example, you can set up a "Web bug / URL" [canary token](https://canarytokens.com/generate) and have it capture alert information using custom query string parameters, which will send you an email when triggered.
+**alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system. For example, you can set up a web hook using [IFTTT](https://ifttt.com/maker_webhooks) and have it capture alert information and send you an email when triggered.
 
-Both URL and the values contained in the postData property can contain the following placeholders, which will be replaced with the actual alert data:
+| Property   | Description                                                                               | Expected Type / Value | Example Value |
+|------------|-------------------------------------------------------------------------------------------|-----------------------|---------------|
+| url        | Request URL                                                                               | String                |               |
+| headers    | Request headers (E.G. an API Key)                                                         | Dictionary            |               |
+| method     | Request method                                                                            | GET or POST           | POST          |
+| sendAsJson | Applies to POST requests only.<br><br>If true, the request body is sent as JSON with content type application/json.<br><br>Otherwise, it's sent as application/x-www-form-urlencoded                                                                                    | Boolean               | true          |
+| postData   | The data to send with the request                                                         | Dictionary            |           |
+ 
+Both the URL and the values contained in the postData property can contain the following placeholders, which will be replaced with the actual alert data:
 * {url}
 * {fileUrl}
 * {filename}
 * {timestamp}
 * {ruleName}
 * {state} (Download state)
-* {action} (Rule action, block or audit)
+* {action} (Rule action: block, audit or notify)
 * {sha256} (Only for HTML Smuggled downloads)
 * {fileInspection} (Only for HTML Smuggled downloads)
 

@@ -219,6 +219,8 @@ class configuration{
     }
 
     async sendAlertMessage(downloadItem){
+        console.log("in sendAlertMessage");
+        console.log(this.alertConfig);
         if(!this.alertConfig){
             return;
         }
@@ -250,15 +252,17 @@ class configuration{
 
     static async loadDefaultConfig(){
         var configUrl = chrome.runtime.getURL("config/config.json");
-        
-        var config = await Utils.XhrRequest(configUrl);
-
+    
         try{
-            var parsed = JSON.parse(config);
+
+            var config = await (await Utils.XhrRequest(configUrl)).json();
+
+            console.log(config);
                 
             console.log(`Loaded config from '${configUrl}'`);
-            return new configuration(parsed);
-        }catch{
+            return new configuration(config);
+        }catch(ex){
+            console.log("Failed to lod config" + ex);
             return null;
         }
     }

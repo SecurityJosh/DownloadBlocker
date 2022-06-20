@@ -1,82 +1,113 @@
-var config = null;
+async function initConfig(){
 
-// Maps the download URL to the DownloadItem. DownloadItem is enriched with metadata as it becomes available.
-var downloadData = {};
+  let managedConfig = await chrome.storage.managed.get();
 
-// Load initial config
-chrome.storage.managed.get(managedConfig => {
   if (managedConfig.Config){
     console.log("Found managed config");
     try{
-      config = new configuration(JSON.parse(managedConfig.Config));
+      return new configuration(JSON.parse(managedConfig.Config));
     }catch{
       console.log("Got JSON error when trying to parse configuration")
+      return null;
     }
+  }else{
+    console.log("Didn't find managed config, using default.")
+    return await configuration.loadDefaultConfig();
+  }
+}
+
+// [GUID] => DownloadId
+// GUID_[GUID] -> {macros, sha256 etc.}
+// DownloadID_ID -> [GUID]
+
+async function getStorageDataByKey(key){
+  let data = await chrome.storage.session.get(key);
+  return data?.[key] ?? null;
+}
+
+async function writeStorageData(key, value){
+  var data = {};
+  data[key] = value;
+  return await chrome.storage.session.set(data);
+}
+
+async function getDownloadFromGuid(guid){
+
+  let downloadId = await getStorageDataByKey(guid);
+
+  if(!downloadId){
+    return null;
+  }
+
+  let matchingDownloads = await chrome.downloads.search({id: downloadId});
+
+  return matchingDownloads?.[0];
+  
+}
+
+async function correlateDownloadWithMetaData(downloadItem){
+  
+  let downloadGuid = await getStorageDataByKey("DownloadID_" + downloadItem.id);
+
+  if(downloadGuid){
+    return await getStorageDataByKey("GUID_" + downloadGuid)
   }
   
-  if(!config){
-    console.log("Didn't find managed config, using default.")
-    configuration.loadDefaultConfig().then(defaultConfig => config = defaultConfig);
+  for(const [storageKey, storageData] of Object.entries(await chrome.storage.session.get())){
+
+    /* 
+      e.g. 
+      "GUID_fbf5b3bd-2bb5-1f49-99ad-af49d8773b47" ->
+        {
+          guid: 'fbf5b3bd-2bb5-1f49-99ad-af49d8773b47',
+          id: 'blob:https://www.outflank.nl/d740384d-8b10-4740-b489-9d97d0ba3017',
+          initiatingPage: 'https://www.outflank.nl/demo/html_smuggling.html',
+          sha256: 'Pending'
+        }
+    */
+   
+    if(downloadItem.finalUrl == storageData.id){
+      await writeStorageData(storageData.guid, downloadItem.id);
+      await writeStorageData("DownloadID_" + downloadItem.id, storageData.guid);
+      return storageData;
+    }
   }
-});
+
+  return null;
+}
+
+// Load initial config
 
 // Listen for async event giving us a file's metadata, including SHA256 hash, referer and file inspection data.
 chrome.runtime.onMessage.addListener(
-  function(request, sender, sendResponse) {
+  async function(request, sender, sendResponse) {
     // console.log(sender.tab ? "from a content script:" + sender.tab.url : "from the extension");
-    console.log(request);
-
+    sendResponse(true);
     if(!request){
       console.log("Request was null?");
-      sendResponse(true);
+      return;
     }
 
-    if(!downloadData[request.id] && request?.sha256 == "Pending" && !request.fileInspectionData){
-      console.log("Could not find downloadData[request.id] : " + request.id);
-      downloadData[request.id] = {};
+    let guid = request.guid;
+
+    let existingData = await getStorageDataByKey("GUID_" + guid);
+    if(existingData){
+      request.sha256 = request.sha256 && request.sha256 != "Pending" ? request.sha256 : existingData.sha256;
+      request.referringPage = existingData.referringPage ?? request.initiatingPage;
+      request.id = existingData.id ?? request.id;
+      // This assumes that all file inspection data is sent together. Maybe we should merge arrays instead?
+      request.fileInspectionData == existingData.fileInspectionData ?? request.fileInspectionData;      
     }
 
-    var downloadDetails = downloadData[request.id];
+    await writeStorageData("GUID_" + guid, request);
 
-    if(request["sha256"] && (!downloadDetails.sha256 || downloadDetails.sha256 == "Pending")){
-      downloadDetails.sha256 = request["sha256"];
+    let downloadItem = await getDownloadFromGuid(guid);
+
+    if(downloadItem){
+      await processDownload(downloadItem);
     }
-
-    if(request["initiatingPage"] && !downloadDetails.referringPage){
-      downloadDetails.referringPage = request["initiatingPage"];
-    }
-
-    if(request["fileInspectionData"] && !downloadDetails.fileInspectionData){
-      // This assumed that all file inspection data is sent together. Maybe we should merge arrays instead?
-      downloadDetails.fileInspectionData = request["fileInspectionData"];
-    }  
-      
-    //delete downloadHashes[downloadItem.finalUrl];
-
-    if(downloadDetails.state){ // If downloadDetails is a DownloadItem and not just a metadata array.
-      console.log("Resubmitting download for scanning");
-      processDownload(downloadDetails);
-    }
-
-    
-    
-    sendResponse(true);
   }
 );
-
-// Listen for config changes
-chrome.storage.onChanged.addListener(function(changes, namespace) {
-  if(!namespace == "managed"){
-    return;
-  }
-
-  for (var key in changes) {
-    if(key == "Config"){
-      console.log("config change detected");
-      config = new configuration(JSON.parse(changes["Config"].newValue));
-    }
-  }
-});
 
 // Cancel a download
 function cancelDownloadInProgress(downloadItem){
@@ -100,7 +131,11 @@ function deleteSuccessfulDownload(downloadItem){
       console.log(chrome.runtime.lastError.message);
     }
 
-    chrome.downloads.erase({"id" : downloadItem.id}, function(){});
+    chrome.downloads.erase({"id" : downloadItem.id}, function(){
+      if(chrome.runtime.lastError){
+        console.log(chrome.runtime.lastError.message);
+      }
+    });
   });
 }
 
@@ -118,22 +153,6 @@ function abortDownload(downloadItem){
   }
 }
 
-// https://stackoverflow.com/a/44476626
-function timer(ms) { return new Promise(res => setTimeout(res, ms)); }
-
-async function waitForDownloadMetadata(downloadItem){
-  let counter = 1;
-  while(counter <= 10 && downloadData[downloadItem.finalUrl] && (downloadData[downloadItem.finalUrl].sha256 == "Pending" || !downloadData[downloadItem.finalUrl].fileInspectionData)){
-    console.log("wait");
-    await timer(250);
-    counter++;
-  }
-
-  console.log(downloadData);
-
-  return downloadData[downloadItem.finalUrl];
-}
-
 /*
   This function can be called multiple times per download (e.g.)
     When the download is first created
@@ -142,10 +161,17 @@ async function waitForDownloadMetadata(downloadItem){
     When the file's SHA256 hash has been calculated
     When fille inspection has been completed
 */
-function processDownload(downloadItem){
+async function processDownload(downloadItem){
+
+  if(downloadItem.state !== "complete"){
+    return;
+  }
+
   var filename = downloadItem.filename;
 
+  let config = await initConfig();
   if(!filename){
+    console.log("filename was null");
     return;
   }
 
@@ -154,37 +180,25 @@ function processDownload(downloadItem){
     return;
   }
 
-  if(downloadItem.state == "interrupted"){
+  let downloadData = await correlateDownloadWithMetaData(downloadItem);
+
+  if(downloadData?.sha256 == "Pending" || (downloadData && downloadData?.fileInspectionData == null)){
+    console.log(`[${downloadItem.filename}] Waiting for metadata, state is ` + downloadItem.state);
     return;
   }
 
-  if(downloadData[downloadItem.finalUrl]){
-
-    var existingDownloadItem = downloadData[downloadItem.finalUrl];
-
-    // Copy file metadata to updated DownloadItem
-    downloadItem.sha256 = existingDownloadItem.sha256;
-    downloadItem.fileInspectionData = existingDownloadItem.fileInspectionData;
-    // Utils.getCurrentUrl uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
-    downloadItem.referringPage = existingDownloadItem.referringPage || Utils.getCurrentUrl(); // downloadItem.referringPage || Utils.getCurrentUrl();
-
-    // If the download ID is the same we don't need to block the download again.
-    if(existingDownloadItem.id == downloadItem.id){
-      downloadItem.DownloadWillBeBlocked = existingDownloadItem.DownloadWillBeBlocked ?? false;
-    }
+  if(downloadData){
+    // Copy file metadata to updated DownloadItem for audit / notification
+    downloadItem.sha256 = downloadData.sha256;
+    downloadItem.fileInspectionData = downloadData.fileInspectionData;
   }
 
-  downloadItem.referringPage = downloadItem.referringPage || Utils.getCurrentUrl();
-  downloadData[downloadItem.finalUrl] = downloadItem;
+  // getCurrentUrl() uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
+  downloadItem.referringPage = downloadData?.referringPage || await getCurrentUrl();
 
   console.log("Processing download with id: " + downloadItem.id + ", state is: " + downloadItem.state);
   console.log(structuredClone(downloadItem));
 
-  if(downloadItem.DownloadWillBeBlocked){
-    console.log("Download is already in the process of being blocked, no need to rerun.");
-    return;
-  }
-  
   var matchedRule = config.getMatchedRule(downloadItem);
 
   if(!matchedRule){
@@ -210,53 +224,50 @@ function processDownload(downloadItem){
       console.log("Action not set to audit or notify, but no alertConfig is specified, blocking download");
     }
 
-    downloadItem.DownloadWillBeBlocked = true;
-    downloadData[downloadItem.finalUrl] = downloadItem;
-    
     abortDownload(downloadItem);
 
-    var title = Utils.parseString(matchedRule.titleTemplate, downloadItem) || chrome.i18n.getMessage("download_blocked_message_title");
-    var message = Utils.parseString(matchedRule.messageTemplate, downloadItem) || chrome.i18n.getMessage("download_blocked_message_body", [downloadItem.filename, downloadItem.referringPage, downloadItem.finalUrl]);
-    Utils.notifyUser(title, message);
   }else{
     if(ruleAction == "notify"){
-
-      if(downloadItem.state == "in_progress"){
-        console.log("Wait for download to finish before issuing notification");
-        return;
-      }
-
-      console.log("Rule action is set to notify");
-
-      var title = Utils.parseString(matchedRule.titleTemplate, downloadItem) || chrome.i18n.getMessage("download_notify_message_title");
-      var message = Utils.parseString(matchedRule.messageTemplate, downloadItem) || chrome.i18n.getMessage("download_notify_message_body", [downloadItem.filename, downloadItem.referringPage, downloadItem.finalUrl]);
-      Utils.notifyUser(title, message);
-
+      console.log("Rule action is set to notify, download won't be blocked.");
     }else{
       console.log("Rule action is set to audit, download won't be blocked.");
     }
   }
 
-  waitForDownloadMetadata(downloadItem).then(async function (downloadItem) {
-    if(downloadItem == null || !downloadItem.id){ // Timed out waiting for metadata.
-      return;
-    }
+  if(ruleAction != "audit"){
+    // If the ruleAction is not audit, i.e. it's block or notify, we need to send the user a notification
+    var titleTemplateName = ruleAction == "block" ? "download_blocked_message_title" : "download_notify_message_title";
+    var bodyTemplateName  = ruleAction == "block" ? "download_blocked_message_body"  : "download_notify_message_body";
 
-    await config.sendAlertMessage(downloadItem);
+    var title = Utils.parseString(matchedRule.titleTemplate, downloadItem) || await chrome.i18n.getMessage(titleTemplateName);
+    var message = Utils.parseString(matchedRule.messageTemplate, downloadItem) || await chrome.i18n.getMessage(bodyTemplateName, [downloadItem.filename, downloadItem.referringPage, downloadItem.finalUrl]);
+    Utils.notifyUser(title, message);
+  }
 
-    // Since the data data:// URLs contain is immutable, don't remove them from the cache. This works around a race condition where downloads of the same data:// URL multiple times in quick succession can result in the metadata being lost.
-    if(!downloadItem.finalUrl.toLowerCase().startsWith("data:")){
-      delete downloadData[downloadItem.finalUrl];
-    }
-    
-  });
+  await config.sendAlertMessage(downloadItem);
 }
 
-// onDeterminingFilename doesn't seem to trigger for files downloaded via CTRL + S, so we use .onChanged for these instances
+chrome.downloads.onCreated.addListener(function (downloadItem){
+    if(chrome.runtime.lastError){
+      console.log(chrome.runtime.lastError.message);
+    }
+    console.log("Download created");
+    correlateDownloadWithMetaData(downloadItem);
+  }
+);
+
 chrome.downloads.onChanged.addListener(function callback(downloadDelta){
+
+  if(chrome.runtime.lastError){
+    console.log(chrome.runtime.lastError.message);
+  }
   if(downloadDelta.state){
 
     chrome.downloads.search({'id' : downloadDelta.id}, function(items){
+      if(chrome.runtime.lastError){
+        console.log(chrome.runtime.lastError.message);
+      }
+
       if(items && items.length == 1){
         processDownload(items[0]);
       }
@@ -264,43 +275,30 @@ chrome.downloads.onChanged.addListener(function callback(downloadDelta){
   }
 });
 
-// By listening for this event we can cancel the download before the user even sees a save-as prompt.
-// Unfortunately, the download doesn't yet have a filename if we try to use the chrome.downloads.onCreated event, so this is the earliest point we have all of the information available to cancel the download.
-chrome.downloads.onDeterminingFilename.addListener(function(downloadItem, suggest) {
-  var suggestion = {
-    filename: downloadItem.filename,
-    conflict_action: 'uniquify',
-    conflictAction: 'uniquify'
-  };
+try{
+  const scriptId = "DownloadBlockerScript_" + Utils.generateGuid();
 
-  suggest(suggestion);
-  processDownload(downloadItem);
+  console.log(`Injecting script with ID '${scriptId}'`);
+  
+  chrome.scripting.registerContentScripts([{
+    allFrames : true,
+    id: scriptId,
+    js : ["src/inject.js"],
+    matches : ["<all_urls>"],
+    runAt : "document_start",
+    world: "MAIN"
+  }]);
 
-});
+  if(chrome.runtime.lastError){
+    console.log(chrome.runtime.lastError);
+  }
 
-//https://stackoverflow.com/questions/54821584/chrome-extension-code-to-get-current-active-tab-url-and-detect-any-url-update-in
-// Keep track of current tab URL, in order to correlate which URL is responsible for a download
-
-/*
-    Unfortunately due to a bug in Chromium V91, the code to keep track of the current URL can fail, so we have to wrap in a setTimeout call.
-    https://bugs.chromium.org/p/chromium/issues/detail?id=1213925
-*/
-function UpdateCurrentUrl(activeInfo) {
-  chrome.tabs.get(activeInfo.tabId, function(tab){
-    if (chrome.runtime.lastError) {
-      setTimeout(function(){UpdateCurrentUrl(activeInfo) }, 500); // arbitrary delay
-      return;
-    }
-    Utils.currentUrl = tab.url;
-  });
+}catch(e){
+  console.log(e);
 }
 
-chrome.tabs.onActivated.addListener(function(activeInfo){    
-  UpdateCurrentUrl(activeInfo);
-});
-
-chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
-  if (tab.active && change.url) {
-      Utils.currentUrl = change.url;         
-  }
-});
+async function getCurrentUrl() {
+  let queryOptions = {active: true, currentWindow: true};
+  let [tab] = await chrome.tabs.query(queryOptions);
+  return tab?.url;
+}

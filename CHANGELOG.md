@@ -1,14 +1,21 @@
 ## Change Log
 
+### 0.2.0
+* Migrated the extension to MV3.
+
+### 0.1.8
+* Smuggled files which are delivered via iframes with data: URLs are now content-inspected and will have their file-hash calculated.
+
 ### 0.1.7
 * Fixed bug which meant that when exceptions of non-smuggled downloads were being checked, it was the referrer URL that was being checked instead of the download URL.
-* Added the 'referrerhostname' and 'referrerbasedomain' exception types in-case the behavior above was desireable.
+* Added the 'referrerhostname' and 'referrerbasedomain' exception types in-case this behavior is desireable.
 
 ### 0.1.6
 * The 'hostname' and 'basedomain' exception types now support arrays as well as strings.
 * Fixed bug which meant that only the first exception in a rule was actually checked.
 * Fixed issue which meant that base64 encoded data:// URLs would not be processed for SHA256 calculation or file inspection.
 * Rewrote how file metadata (SHA256, file inspection data) is handled which means that this information can trigger a rule action even if it is received after the file has finished downloading.
+* The {timestamp} placeholder now uses the time the download was initiated instead of the time the alert notification was sent.
 
 ### 0.1.5
 * Fixed bug which meant an empty response from the server when sending an alert was handled as an error.
