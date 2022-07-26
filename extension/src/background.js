@@ -194,7 +194,7 @@ async function processDownload(downloadItem){
   }
 
   // getCurrentUrl() uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
-  downloadItem.referringPage = downloadData?.referringPage || await getCurrentUrl();
+  downloadItem.referringPage = downloadData?.referringPage || downloadItem.referrer || await getCurrentUrl();
 
   console.log("Processing download with id: " + downloadItem.id + ", state is: " + downloadItem.state);
   console.log(structuredClone(downloadItem));
@@ -213,25 +213,22 @@ async function processDownload(downloadItem){
 
   var ruleAction = config.getRuleAction(matchedRule);
   
+  if(ruleAction == "audit" && !config.getAlertConfig()){
+    ruleAction = "block";
+    console.log("Action set to audit, but no alertConfig is specified, overriding action to block download");
+  }
+
   downloadItem["action"] = ruleAction; // For alerting purposes
 
   var shouldBlockDownload = !["audit", "notify"].includes(ruleAction);
 
-  if(shouldBlockDownload || (ruleAction == "audit" && !config.getAlertConfig())){
-    if(shouldBlockDownload){
-      console.log("Action not set to audit or notify, blocking download");
-    }else{
-      console.log("Action not set to audit or notify, but no alertConfig is specified, blocking download");
-    }
+  if(shouldBlockDownload){
 
+    console.log("Action not set to audit or notify, blocking download");
     abortDownload(downloadItem);
 
   }else{
-    if(ruleAction == "notify"){
-      console.log("Rule action is set to notify, download won't be blocked.");
-    }else{
-      console.log("Rule action is set to audit, download won't be blocked.");
-    }
+    console.log(`Rule action is set to ${ruleAction}, download won't be blocked.`);
   }
 
   if(ruleAction != "audit"){

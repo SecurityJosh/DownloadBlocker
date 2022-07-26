@@ -52,36 +52,34 @@ class configuration{
     checkException(exception, downloadItem){
         var exceptionType = exception.type.toLowerCase();
         var exceptionValue = exception.value;
-            
-        if(!downloadItem.referringPage){
-            console.log("No referringPage");
-            return false;
-        }
 
         // If the download is HTML smuggled, use the referring page, otherwise use the file URL.
+
         var downloadHostname = new URL(Utils.isJsDownload(downloadItem) ? downloadItem.referringPage : downloadItem.finalUrl).hostname.toLowerCase();
+        var referrerHostname = new URL(downloadItem.referringPage).hostname.toLowerCase();
 
         switch(exceptionType){
             case "hostname":
             case "basedomain":
             case "referrerhostname":
             case "referrerbasedomain":
-                let domainMatch = (downloadHostname, exceptionType, exceptionValue) => {
+                
+                let domainMatch = (downloadHostname, referrerHostname, exceptionType, exceptionValue) => {
                     let funcs = {
-                        "hostname" : (downloadItem, downloadHostname, exceptionValue) => downloadHostname == exceptionValue.toLowerCase(),
-                        "basedomain" : (downloadItem, downloadHostname, exceptionValue) => ('.' + downloadHostname).endsWith('.' + exceptionValue.toLowerCase()),
-                        "referrerhostname" : (downloadItem, downloadHostname, exceptionValue) => (downloadItem.referrer ?? downloadItem.referringPage) == exceptionValue.toLowerCase(),
-                        "referrerbasedomain" : (downloadItem, downloadHostname, exceptionValue) => ('.' + (downloadItem.referrer ?? downloadItem.referringPage)).endsWith('.' + exceptionValue.toLowerCase()),
+                        "hostname" : (downloadHostname, referrerHostname, exceptionValue) => downloadHostname == exceptionValue.toLowerCase(),
+                        "basedomain" : (downloadHostname, referrerHostname, exceptionValue) => ('.' + downloadHostname).endsWith('.' + exceptionValue.toLowerCase()),
+                        "referrerhostname" : (downloadHostname, referrerHostname, exceptionValue) => referrerHostname == exceptionValue.toLowerCase(),
+                        "referrerbasedomain" : (downloadHostname, referrerHostname, exceptionValue) => ('.' + referrerHostname).endsWith('.' + exceptionValue.toLowerCase()),
                     };
 
-                    return funcs[exceptionType](downloadItem, downloadHostname, exceptionValue);
+                    return funcs[exceptionType](downloadHostname, referrerHostname, exceptionValue);
                 };
 
                 if(Array.isArray(exceptionValue)){
-                    return exceptionValue.some(x => domainMatch(downloadHostname, exceptionType, x));
+                    return exceptionValue.some(x => domainMatch(downloadHostname, referrerHostname, exceptionType, x));
                 }
 
-                return domainMatch(downloadHostname, exceptionType, exceptionValue);
+                return domainMatch(downloadHostname, referrerHostname, exceptionType, exceptionValue);
 
             case "fileextensions":
                 return this.isExtensionInList(exceptionValue, Utils.getFileExtension(downloadItem.filename));
@@ -194,7 +192,9 @@ class configuration{
 
         for (let ruleIndex = 0; ruleIndex < this.rules.length; ruleIndex++) {
             const rule = this.rules[ruleIndex];
-        
+            
+            console.log(rule);
+
             if(this.doesDownloadMatchRule(rule, downloadItem)){
                 
                 downloadItem.ruleName = rule.ruleName ?? "";

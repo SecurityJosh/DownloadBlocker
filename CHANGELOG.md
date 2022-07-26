@@ -1,5 +1,15 @@
 ## Change Log
 
+### 1.0.0
+* Fixed bug which meant the the 'referrerbasedomain' exception type did not function as expected.
+
+### 0.2.2
+* Fixed bug which meant a download matching an audit rule with no alertConfig set would not generate a notification when blocked.
+* Fixed bug which meant the the 'referrerbasedomain' and 'referrerhostname' exception types did not function as expected.
+
+### 0.2.1
+* Updated minimum Chrome version in manifest to 102
+
 ### 0.2.0
 * Migrated the extension to MV3.
 
