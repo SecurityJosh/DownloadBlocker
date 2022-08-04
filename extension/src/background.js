@@ -2,13 +2,26 @@ async function initConfig(){
 
   let managedConfig = await chrome.storage.managed.get();
 
+  if(managedConfig.Hostname){
+    Utils.Hostname = managedConfig.Hostname;
+  }
+
+  if(managedConfig.Username){
+    Utils.Username = managedConfig.Username;
+  }
+
   if (managedConfig.Config){
     console.log("Found managed config");
     try{
       return new configuration(JSON.parse(managedConfig.Config));
     }catch{
-      console.log("Got JSON error when trying to parse configuration")
-      return null;
+      console.log("Got JSON error when trying to parse configuration");
+
+      var title = await chrome.i18n.getMessage("config_error_title");
+      var message = await chrome.i18n.getMessage("config_error_body");
+      Utils.notifyUser(title, message);
+      
+      return await configuration.loadDefaultConfig();
     }
   }else{
     console.log("Didn't find managed config, using default.")
@@ -61,7 +74,7 @@ async function correlateDownloadWithMetaData(downloadItem){
         {
           guid: 'fbf5b3bd-2bb5-1f49-99ad-af49d8773b47',
           id: 'blob:https://www.outflank.nl/d740384d-8b10-4740-b489-9d97d0ba3017',
-          initiatingPage: 'https://www.outflank.nl/demo/html_smuggling.html',
+          referringPage: 'https://www.outflank.nl/demo/html_smuggling.html',
           sha256: 'Pending'
         }
     */

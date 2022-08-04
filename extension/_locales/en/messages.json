@@ -42,5 +42,13 @@
        "example": "https://example.com/payslip.hta"
      }
     }
+  },
+  "config_error_title": {
+    "message": "Download Blocker - Config Error",
+    "description": "The title of the message shown to the user when a managed config fails to parse"
+  },
+  "config_error_body": {
+    "message": "There was an error parsing the managed config, using default",
+    "description": "The body of the message shown to the user when a managed config fails to parse"
   }
 }

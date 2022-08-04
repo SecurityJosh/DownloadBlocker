@@ -1,4 +1,8 @@
 var Utils = {
+    
+    Hostname : "",
+    Username: "",
+
     generateUuid() {
         // https://stackoverflow.com/a/2117523
         return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/\d/g, c =>
@@ -63,7 +67,12 @@ var Utils = {
         .replaceAll("{fileUrl}", downloadItem.finalUrl)
         .replaceAll("{filename}", downloadItem.filename)
         .replaceAll("{timestamp}", Date.parse(downloadItem.startTime))
-        .replaceAll("{sha256}", downloadItem.sha256 ?? "");
+        .replaceAll("{formattedTimestamp}", new Date(Date.parse(downloadItem.startTime)).toUTCString())
+        .replaceAll("{eventTimestamp}", Date.now())
+        .replaceAll("{formattedEventTimestamp}", new Date().toUTCString())
+        .replaceAll("{sha256}", downloadItem.sha256 ?? "")
+        .replaceAll("{hostname}", this.Hostname)
+        .replaceAll("{username}", this.Username);
 
     },
 
@@ -86,6 +95,11 @@ var Utils = {
         .replaceAll("{fileUrl}", encodeURIComponent(downloadItem.finalUrl))
         .replaceAll("{filename}", encodeURIComponent(downloadItem.filename))
         .replaceAll("{timestamp}", Date.parse(downloadItem.startTime))
-        .replaceAll("{sha256}", downloadItem.sha256 ?? "");
+        .replaceAll("{formattedTimestamp}", new Date(Date.parse(downloadItem.startTime)).toUTCString())
+        .replaceAll("{eventTimestamp}", Date.now())
+        .replaceAll("{formattedEventTimestamp}", new Date().toUTCString())
+        .replaceAll("{sha256}", downloadItem.sha256 ?? "")
+        .replaceAll("{hostname}", this.Hostname)
+        .replaceAll("{username}", this.Username);
     }
 }

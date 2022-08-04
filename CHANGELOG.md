@@ -1,5 +1,10 @@
 ## Change Log
 
+### 1.0.1
+* Added {formattedTimestamp}, {eventTimestamp} and {formattedEventTimestamp} placeholders.
+* Added {hostname} and {username} placeholders (Extra configuration required)
+* If a managed configuration fails to parse, a user notification will now be displayed and the extension will fall back to the default config.
+
 ### 1.0.0
 * Fixed bug which meant the the 'referrerbasedomain' exception type did not function as expected.
 

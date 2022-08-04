@@ -10,6 +10,11 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+### 1.0.1
+* Added {formattedTimestamp}, {eventTimestamp} and {formattedEventTimestamp} placeholders.
+* Added {hostname} and {username} placeholders (Extra configuration required)
+* If a managed configuration fails to parse, a user notification will now be displayed and the extension will fall back to the default config.
+
 ### 1.0.0
 * Fixed bug which meant the the 'referrerbasedomain' exception type did not function as expected.
 
@@ -189,12 +194,40 @@ Both the URL and the values contained in the postData property can contain the f
 * {url} (Page URL for smuggled files, referrer URL for non-smuggled files)
 * {fileUrl} (data: / blob: URL for smuggled files, file URL for non-smuggled files)
 * {filename}
-* {timestamp}
+* {timestamp} (Numeric timestamp of when the download was initiated)
+* {formattedTimestamp} (Formatted timestamp of when the download was initiated)
+* {eventTimestamp} (Numeric timestamp of when the download was detected / blocked)
+* {formattedEventTimestamp} (Formatted timestamp of when the download was detected / blocked)
 * {ruleName}
 * {state} (Download state)
 * {action} (Rule action: block, audit or notify)
 * {sha256} (Only for HTML Smuggled downloads)
 * {fileInspection} (Only for HTML Smuggled downloads)
+* {hostname} *
+* {username} *
+
+\* **Environmental Placeholders Configuration**
+
+To aid with investigations, the extension can also include the device hostname / username when sending alerts. To do this, further registry configuration is required, since this information isn't directly available to Chromium extensions.
+
+*Hostname Placeholder*
+
+`HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\kippogcnigegkjidkpfpaeimabcoboak\policy\Hostname` (For Google Chrome)  
+`HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\kippogcnigegkjidkpfpaeimabcoboak\policy\Hostname` (For Chromium Edge)
+
+*Username Placeholder*
+
+`HKEY_CURRENT_USER\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\kippogcnigegkjidkpfpaeimabcoboak\policy\Username` (For Google Chrome)  
+`HKEY_CURRENT_USER\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\kippogcnigegkjidkpfpaeimabcoboak\policy\Username` (For Chromium Edge)
+
+The easiest way to automatically set these values in a domain-joined environment is to use Group Policy Preferences to configure the relevant registry values. Make sure to use User Configuration rather than Computer Configuration, otherwise the username will not resolve properly.
+
+![GPO Configuration](GPO.png)
+
+When the GPOs apply, the environment variables will resolve and the resgistry values will be set with the relevant information:
+
+![Registry - Hostname](HostnameRegistryView.PNG)
+![Registry - Username](UsernameRegistryView.PNG)  
 
 ## Example Configuration
 
@@ -233,7 +266,9 @@ Both the URL and the values contained in the postData property can contain the f
                 "ruleName" : "{ruleName}",
                 "action": "{action}",
                 "state" : "{state}",
-                "fileInspection" : "{fileInspection}"
+                "fileInspection" : "{fileInspection}",
+                "username" : "{username}",
+                "hostname" : "{hostname}",
             }
         } 
     }

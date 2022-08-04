@@ -7,7 +7,18 @@
         "title": "Config",
         "description": "The JSON configuration for the chrome extension",
         "type": "string"
+      },
+
+      "Hostname": {
+        "title": "Hostname",
+        "description": "The device hostname",
+        "type": "string"
+      },
+
+      "Username": {
+        "title": "Username",
+        "description": "Username of the currently logged in user",
+        "type": "string"
       }
   }
-
 }
