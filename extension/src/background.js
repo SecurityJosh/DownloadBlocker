@@ -97,7 +97,7 @@ chrome.runtime.onMessage.addListener(
     // console.log(sender.tab ? "from a content script:" + sender.tab.url : "from the extension");
     sendResponse(true);
     if(!request){
-      console.log("Request was null?");
+      console.log("Request was null");
       return;
     }
 

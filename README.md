@@ -10,6 +10,10 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+### 1.0.2
+* Metadata support added for downloads initiated from inside an iFrame.
+* fileInspectionData now contains a new key, 'zipFileNames', which contains an array of all of the filenames contained within a .zip file.
+* Fixed a bug which meant that the calculated SHA256 for base64-encoded data URIs could be incorrect.
 ### 1.0.1
 * Added {formattedTimestamp}, {eventTimestamp} and {formattedEventTimestamp} placeholders.
 * Added {hostname} and {username} placeholders (Extra configuration required)

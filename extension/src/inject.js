@@ -58,31 +58,31 @@
     // https://stackoverflow.com/a/26324641
     let observer = new MutationObserver(function() {
         if (document.body) {
-           
             document.body.addEventListener("click", function(e){
                 let element = e.target;
-            
                 if (element.tagName.toLowerCase() == "a" && element.hasAttribute("download")){
-                    
                     processUri(element.href, window.location.href);
-
                 }
             });
             observer.disconnect();
         }
     });
+
     observer.observe(document.documentElement, {childList: true});
 
     const base64ToArrayBuffer = function(base64) {
-        var binary_string = window.atob(base64);
-        var len = binary_string.length;
-        var bytes = new Uint8Array( len );
-        for (var i = 0; i < len; i++) { bytes[i] = binary_string.charCodeAt(i); }
-        return bytes.buffer;
+        try{
+            var binary_string = window.atob(base64);
+            var len = binary_string.length;
+            var bytes = new Uint8Array( len );
+            for (var i = 0; i < len; i++) { bytes[i] = binary_string.charCodeAt(i); }
+            return bytes.buffer;
+        }catch(e){
+            return new Uint8Array([]);
+        }
     }
 
     const processUri = function(url, downloadUrl){
-
         if(!url){
             return false;
         }
@@ -96,7 +96,6 @@
         }
                             
         let encoded = downloadData;
-        // function(guid, downloadUrl, initiatingPage, sha256, fileInspectionData){
 
         let guid = generateGuid();
 
@@ -110,8 +109,6 @@
     const parseDataUri = function(uri){
         // e.g. 'data:text/something;charset=utf-8,fileContent'
         // e.g. 'data:text/something,fileContent'
-        //const regularExpression = /(data:[A-Za-z]+\\\/[A-Za-z]+;)(charset=[A-Za-z-\\d]+,)(.*)$/;
-        //const regularExpression = /(data:[A-Za-z]+\\\/[A-Za-z]+;)(charset=[A-Za-z-\\d]+)(;base64)?,(.*)$/i;
         const regularExpression = /data:([A-Za-z-]+\/[A-Za-z-]+)?.*?(;charset=[A-Za-z-\d]+)?.*?(;base64)?,(.*)$/i;
 
         if(regularExpression.test(uri)){
@@ -120,11 +117,7 @@
             let downloadData = results[4];
 
             if(results[3] != null){ // results[3] == ;base64
-                try{
-                    return new Uint8Array(base64ToArrayBuffer(downloadData));
-                }catch(e){
-                    return new Uint8Array([]);
-                }
+                return base64ToArrayBuffer(decodeURIComponent(downloadData));
             }else{
                 return new TextEncoder().encode(decodeURIComponent(downloadData)); // Blindly assume that the downloadData is urlEncoded?
             }
@@ -139,7 +132,20 @@
     };
 
     const inspectFile = function(data){
-        return {"macros" : doesFileHaveMacros(data)};
+        return {"macros" : doesFileHaveMacros(data),
+                "zipFileNames" : extractZipFileNames(data)
+        };
+    }
+
+    const extractZipFileNames = function(fileBytes){
+        const ZIP_HEADER = [0x50, 0x4b];
+        const START_OF_CENTRAL_DIRECTORY = [0x50, 0x4b, 0x01, 0x02];
+
+        try{
+            return byteSearch(fileBytes, ZIP_HEADER, START_OF_CENTRAL_DIRECTORY, zipFileNames) || []; 
+        }catch{
+            return [];
+        }
     }
 
     const digestToHex = function(digest){
@@ -149,38 +155,88 @@
     }
 
     const processHash = function(guid, downloadUrl, initiatingPage, sha256, fileInspectionData){
-        _dispatchEvent(new CustomEvent(eventId, {
-            detail: {guid : guid, id : downloadUrl, sha256: sha256, initiatingPage: initiatingPage, fileInspectionData: fileInspectionData}
-        }));
-    }
 
+        let eventName = eventId;
+        let eventData = {guid : guid, id : downloadUrl, sha256: sha256, initiatingPage: initiatingPage, fileInspectionData: fileInspectionData};
+
+        let downloadEvent = new CustomEvent(eventName, {
+            detail: eventData
+        });
+        
+        if(window == top){
+            _dispatchEvent(downloadEvent);
+        }else{
+            window.top.postMessage(eventData,  "*");
+        }   
+    }
+  
+    window.addEventListener("message", function(x){
+        processHash(x.data.guid, x.data.id, x.data.initiatingPage, x.data.sha256, x.data.fileInspectionData, x.data.fileInspectionData);
+    });
+    
     // https://www.30secondsofcode.org/articles/s/javascript-array-comparison
     const equals = (a, b) =>  a.length === b.length && a.every((v, i) => v === b[i]);
 
     // == File inspection functions ==
 
-    const byteSearch = function(fileBytes, fileHeader, searchBytes){
-        fileBytes = new Uint8Array(fileBytes);
+    const byteSearch = function(fileBytes, fileHeader, searchBytes, callback){
 
+        let results = [];
+    
+        fileBytes = new Uint8Array(fileBytes);
+    
         if(fileBytes.length < fileHeader.length + searchBytes.length){
             return false;
         }
-
+    
         if(!(equals(fileBytes.slice(0, fileHeader.length), fileHeader))){
             return false;
         }
         
         // fileBytes.some((e, i) => {return equals(fileBytes.slice(i, i + searchBytes.length), searchBytes)});
-
+    
         for (var i = Math.max(0, fileHeader.length -1); i < fileBytes.length - (searchBytes.length -1); i++){
             var slice = fileBytes.slice(i, i + searchBytes.length);
             if(equals(slice, searchBytes)){
-                return true;
+    
+                if(!callback){
+                    return true;
+                }
+    
+                let result = callback(i, fileBytes);
+                if(result){
+                    results.push(result);
+                }
             }
         }
-
+    
+        if(callback){
+            return results;
+        }
+    
         return false;
     };
+
+    const zipFileNames = function(fileOffset, fileBytes){
+        let startOfRecordIndex = fileOffset;
+        const FILE_NAME_LENGTH_OFFSET = 28;
+        const FILE_NAME_OFFSET = 46;
+    
+        if (fileBytes.length <= startOfRecordIndex + FILE_NAME_LENGTH_OFFSET + 1){
+            return false; 
+        }
+    
+        let fileNameLengthStartByte = startOfRecordIndex + FILE_NAME_LENGTH_OFFSET;
+    
+        let fileNameLength = fileBytes[fileNameLengthStartByte] + (256 * fileBytes[fileNameLengthStartByte + 1])
+    
+        let fileNameStartByte = startOfRecordIndex + FILE_NAME_OFFSET
+        let fileNameBytes = (fileBytes.slice(fileNameStartByte, fileNameStartByte + fileNameLength));
+    
+        let fileName = String.fromCharCode.apply(null, fileNameBytes);
+    
+        return fileName;
+    }
 
     const doesFileHaveExcel4Macros = function(fileBytes){
     /*
