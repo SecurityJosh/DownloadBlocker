@@ -14,6 +14,7 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 * Metadata support added for downloads initiated from inside an iFrame.
 * fileInspectionData now contains a new key, 'zipFileNames', which contains an array of all of the filenames contained within a .zip file.
 * Fixed a bug which meant that the calculated SHA256 for base64-encoded data URIs could be incorrect.
+
 ### 1.0.1
 * Added {formattedTimestamp}, {eventTimestamp} and {formattedEventTimestamp} placeholders.
 * Added {hostname} and {username} placeholders (Extra configuration required)
@@ -151,13 +152,14 @@ If multiple rules are matched, the first block rule takes precedence. An audit o
 
 Property name: fileInspection
 
-For files which are created using HTML Smuggling, the extension can inspect them for certain properties. At present, the only detection is for macros in binary office documents (i.e. .docm .ppt, .xls).
+For files which are created using HTML Smuggling, the extension can inspect them for certain properties. Additionally, rules can be configured to look for these properties in smugged files.
 
 If multiple inspection types are specified, all values must match for the rule to match.
 
-| Inspection Type | Description                                                                       |
-|-----------------|-----------------------------------------------------------------------------------|
-| macros          | True if the file is a binary office file and contains macros or Excel 4.0 macros  |
+| Inspection Type | Description                                                                                              | Example 'fileInspection' config value  |
+|-----------------|----------------------------------------------------------------------------------------------------------|----------------------------------------|
+| macros          | True if the file is a binary office file (i.e. .docm .ppt, .xls) and contains macros or Excel 4.0 macros.| {"macros" : "true"}                    |
+| zipFileNames    | An array of all of the filenames contained within the zip file. Empty if the file is not a zip file.     | N/A                                    |
 
 
 ### Exceptions (Optional)
@@ -184,7 +186,7 @@ The **titleTemplate** and **messageTemplate** properties allow you to customise 
 
 *alertConfig is a global setting, not a per-rule setting.*
 
-**alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system. For example, you can set up a web hook using [IFTTT](https://ifttt.com/maker_webhooks) and have it capture alert information and send you an email when triggered.
+**alertConfig** is an optional object which contains a number of parameters used to send a HTTP request when a download is blocked. This can be used to ingest block data into a SIEM or other alert system. For example, you can set up a web hook using [IFTTT](https://securityjosh.github.io/2022/09/09/HTML-Smuggling-Email-Notifications.html) and have it capture alert information and send you an email when triggered.
 
 | Property   | Description                                                                               | Expected Type / Value | Example Value |
 |------------|-------------------------------------------------------------------------------------------|-----------------------|---------------|
