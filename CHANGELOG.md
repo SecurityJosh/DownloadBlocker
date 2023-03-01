@@ -1,5 +1,11 @@
 ## Change Log
 
+### 1.0.3
+* The extension can now retrieve file metadata using a native messaging host. This allows metadata to be calculated in some situations which may otherwise not be possible. (e.g. Downloads smuggled via a document with a file:// origin, files downloaded from a web-server.)
+* Implemented cleanup of session storage when it is no longer needed.
+* Changes to how the referrer URL is inferred which will hopefully be more accurate.
+* Fixed an issue with the injected content-script which could result in the webpage behaving unexpectedly in a specific situation.
+
 ### 1.0.2
 * Metadata support added for downloads initiated from inside an iFrame.
 * fileInspectionData now contains a new key, 'zipFileNames', which contains an array of all of the filenames contained within a .zip file.

@@ -31,7 +31,8 @@ async function initConfig(){
 
 // [GUID] => DownloadId
 // GUID_[GUID] -> {macros, sha256 etc.}
-// DownloadID_ID -> [GUID]
+// DownloadID_[ID] -> [GUID]
+// UrlAtCreationForDownload_[ID] -> URL
 
 async function getStorageDataByKey(key){
   let data = await chrome.storage.session.get(key);
@@ -100,7 +101,7 @@ chrome.runtime.onMessage.addListener(
       console.log("Request was null");
       return;
     }
-
+    
     let guid = request.guid;
 
     let existingData = await getStorageDataByKey("GUID_" + guid);
@@ -166,13 +167,26 @@ function abortDownload(downloadItem){
   }
 }
 
+async function clearSessionStorageData(downloadItem){
+  let downloadGuid = await getStorageDataByKey("DownloadID_" + downloadItem.id);
+
+  await chrome.storage.session.remove("DownloadID_" + downloadItem.id);
+  await chrome.storage.session.remove("UrlAtCreationForDownload_" + downloadItem.id);
+
+  if(downloadGuid){
+    await chrome.storage.session.remove("GUID_" + downloadGuid);
+    await chrome.storage.session.remove(downloadGuid);
+  }
+}
+
+
 /*
   This function can be called multiple times per download (e.g.)
     When the download is first created
     When the download's filename has been determined
     Whenever the download changes state (in_progress, interrupted, complete)
     When the file's SHA256 hash has been calculated
-    When fille inspection has been completed
+    When file inspection has been completed
 */
 async function processDownload(downloadItem){
 
@@ -200,14 +214,35 @@ async function processDownload(downloadItem){
     return;
   }
 
+  // getCurrentUrl() uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
+
+  let urlAtCreationForDownload = await getStorageDataByKey("UrlAtCreationForDownload_" + downloadItem.id);
+  let nativeReferrer = downloadItem.referrer;
+
+  // The native referrer value doesn't always contain the full URL, but it is more reliable. We can balance the two by preferring the URL of the page the user was on when the download started if partial URL of the native referrer matches it.
+  if(urlAtCreationForDownload.startsWith(downloadItem.referrer)){
+    downloadItem.referrer = urlAtCreationForDownload;
+  }
+
+  downloadItem.referringPage = downloadData?.referringPage || downloadItem.referrer || urlAtCreationForDownload || await getCurrentUrl();
+  downloadItem.referrer = nativeReferrer;
+
+  if(!downloadData){
+    try{
+      downloadData = await chrome.runtime.sendNativeMessage('securityjosh.download_blocker', { FilePath: downloadItem.filename});
+      if(chrome.runtime.lastError){
+        console.log(chrome.runtime.lastError.message);
+      }
+    }catch(e){
+      console.log(e);
+    }
+  }
+    
   if(downloadData){
     // Copy file metadata to updated DownloadItem for audit / notification
     downloadItem.sha256 = downloadData.sha256;
     downloadItem.fileInspectionData = downloadData.fileInspectionData;
   }
-
-  // getCurrentUrl() uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
-  downloadItem.referringPage = downloadData?.referringPage || downloadItem.referrer || await getCurrentUrl();
 
   console.log("Processing download with id: " + downloadItem.id + ", state is: " + downloadItem.state);
   console.log(structuredClone(downloadItem));
@@ -216,6 +251,7 @@ async function processDownload(downloadItem){
 
   if(!matchedRule){
     console.log("Download didn't match any rules")
+    await clearSessionStorageData(downloadItem);
     return;
   }
 
@@ -255,14 +291,17 @@ async function processDownload(downloadItem){
   }
 
   await config.sendAlertMessage(downloadItem);
+
+  await clearSessionStorageData(downloadItem);
 }
 
-chrome.downloads.onCreated.addListener(function (downloadItem){
+chrome.downloads.onCreated.addListener(async function (downloadItem){
     if(chrome.runtime.lastError){
       console.log(chrome.runtime.lastError.message);
     }
     console.log("Download created");
     correlateDownloadWithMetaData(downloadItem);
+    writeStorageData("UrlAtCreationForDownload_" + downloadItem.id, await getCurrentUrl());
   }
 );
 
@@ -292,6 +331,7 @@ try{
   
   chrome.scripting.registerContentScripts([{
     allFrames : true,
+    matchOriginAsFallback: true,
     id: scriptId,
     js : ["src/inject.js"],
     matches : ["<all_urls>"],
@@ -310,5 +350,5 @@ try{
 async function getCurrentUrl() {
   let queryOptions = {active: true, currentWindow: true};
   let [tab] = await chrome.tabs.query(queryOptions);
-  return tab?.url;
+  return tab?.url || "";
 }

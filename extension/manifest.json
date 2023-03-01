@@ -3,7 +3,7 @@
   "storage" : {
    "managed_schema" : "schema.json"  
   },
-  "version": "1.0.2",
+  "version": "1.0.3",
   "manifest_version": 3,
   "description": "This chrome extension was created to block HTML smuggling attacks. It can also block downloads of unwanted file types.",
   "homepage_url": "https://github.com/SecurityJosh/DownloadBlocker",
@@ -23,7 +23,8 @@
     "notifications",
     "tabs",
     "storage",
-    "scripting"
+    "scripting",
+    "nativeMessaging"
   ],
 
   "content_scripts": [
@@ -31,7 +32,8 @@
       "matches": ["file://*/*", "http://*/*", "https://*/*"],
       "js": ["src/contentscript.js"],
       "run_at":"document_start",
-      "allFrames" : true
+      "allFrames" : true,
+      "match_origin_as_fallback": true
     }
 ],
 

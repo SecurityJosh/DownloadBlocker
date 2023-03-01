@@ -10,6 +10,12 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+### 1.0.3
+* The extension can now retrieve file metadata using a native messaging host. This allows metadata to be calculated in some situations which may otherwise not be possible. (e.g. Downloads smuggled via a document with a file:// origin, files downloaded from a web-server.)
+* Implemented cleanup of session storage when it is no longer needed.
+* Changes to how the referrer URL is inferred which will hopefully be more accurate.
+* Fixed an issue with the injected content-script which could result in the webpage behaving unexpectedly in a specific situation.
+
 ### 1.0.2
 * Metadata support added for downloads initiated from inside an iFrame.
 * fileInspectionData now contains a new key, 'zipFileNames', which contains an array of all of the filenames contained within a .zip file.
@@ -230,10 +236,23 @@ The easiest way to automatically set these values in a domain-joined environment
 
 ![GPO Configuration](GPO.png)
 
-When the GPOs apply, the environment variables will resolve and the resgistry values will be set with the relevant information:
+When the GPOs apply, the environment variables will resolve and the registry values will be set with the relevant information:
 
 ![Registry - Hostname](HostnameRegistryView.PNG)
 ![Registry - Username](UsernameRegistryView.PNG)  
+
+## Native Messaging Host
+
+By default, the extension relies on being able to inject a content script into the webpage to calculate file metadata. The file metadata is calculated by hooking relevant JS functions in order to extract and process the smuggled file. This means that there are some situations in which the extension cannot calculate the metadata, including:
+* Non-smuggled files (i.e. files from http(s) origins)
+* Files smuggled via local documents (e.g. a .html file sent via email) (Unless access to file:// origins in the extension settings has been enabled, but this isn't controllable by group policy)
+* Chrome bugs which prevent content script injection (e.g. https://bugs.chromium.org/p/chromium/issues/detail?id=1393521)
+
+Note that this relates only to the downloaded file's metadata, downloads themselves can still be detected / blocked by the extension.
+
+To work around these issues, the extension supports a Native Messaging Host. This is essentially a small piece of software which the browser can spawn and communicate with. This Native Messaging Host is not affected by any of the limitations listed above.
+
+Details on the installation (and source code) of this Native Messaging Host can be found [here](https://github.com/SecurityJosh/DownloadBlockerNativeMessagingHost).
 
 ## Example Configuration
 
