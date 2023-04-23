@@ -10,6 +10,9 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+### 1.0.4
+* Rules now support hostname, basedomain, referrerhostname and referrerbasedomain filters.
+
 ### 1.0.3
 * The extension can now retrieve file metadata using a native messaging host. This allows metadata to be calculated in some situations which may otherwise not be possible. (e.g. Downloads smuggled via a document with a file:// origin, files downloaded from a web-server.)
 * Implemented cleanup of session storage when it is no longer needed.
@@ -84,11 +87,15 @@ The 'Config' value is a JSON object with the following schema:
                 fileInspection: {"InspectionType": [true|false]},
                 "exceptions" : [
                     {
-                        "type" : "hostname|baseDomain|fileExtensions",
-                        "value" : "example.com"		
+                        "type" : "hostname|basedomain|referrerhostname|referrerbasedomain|fileextensions",
+                        "value" : "example.com" | ["example1.com", "example2.com"]		
                     }
                 ],
                 "action" : "audit|block|notify",
+                "hostname" : "example.com" | ["example1.com", "example2.com"],
+                "basedomain" : "example.com" | ["example1.com", "example2.com"],
+                "referrerhostname" : "example.com" | ["example1.com", "example2.com"],
+                "referrerbasedomain" : "example.com" | ["example1.com", "example2.com"],
                 "titleTemplate" : "Notification Title",
                 "messageTemplate" : "Notification message"
             }
@@ -139,6 +146,12 @@ This can be used, for example, to block all HTML Smuggled downloads which origin
 Property name: fileNameRegex
 
 The fileNameRegex property allows you to filter for file names that match a given regex pattern. The pattern is tested against the whole file name, including extension. Be aware that you will need to double-escape any backslashes in your regex string so that the JSON remains valid.
+
+### Domain Filters
+
+Property name: hostname, basedomain, referrerhostname and referrerbasedomain
+
+Allows taking action on downloads from specific domains. (See exceptions for information on each filter type.)
 
 ### Action (Optional, default = block)
 

@@ -49,38 +49,41 @@ class configuration{
         return true;
     }
 
-    checkException(exception, downloadItem){
-        var exceptionType = exception.type.toLowerCase();
-        var exceptionValue = exception.value;
+    doesDomainMatch(matchType, matchValue, downloadItem){
 
         // If the download is HTML smuggled, use the referring page, otherwise use the file URL.
 
         var downloadHostname = new URL(Utils.isJsDownload(downloadItem) ? downloadItem.referringPage : downloadItem.finalUrl).hostname.toLowerCase();
         var referrerHostname = new URL(downloadItem.referringPage).hostname.toLowerCase();
 
+        let domainMatch = (downloadHostname, referrerHostname, matchType, matchValue) => {
+            let funcs = {
+                "hostname" : (downloadHostname, referrerHostname, matchValue) => downloadHostname == matchValue.toLowerCase(),
+                "basedomain" : (downloadHostname, referrerHostname, matchValue) => ('.' + downloadHostname).endsWith('.' + matchValue.toLowerCase()),
+                "referrerhostname" : (downloadHostname, referrerHostname, matchValue) => referrerHostname == matchValue.toLowerCase(),
+                "referrerbasedomain" : (downloadHostname, referrerHostname, matchValue) => ('.' + referrerHostname).endsWith('.' + matchValue.toLowerCase()),
+            };
+
+            return funcs[matchType](downloadHostname, referrerHostname, matchValue);
+        };
+
+        if(Array.isArray(matchValue)){
+            return matchValue.some(x => domainMatch(downloadHostname, referrerHostname, matchType, x));
+        }
+
+        return domainMatch(downloadHostname, referrerHostname, matchType, matchValue);
+    }
+
+    checkException(exception, downloadItem){
+        var exceptionType = exception.type.toLowerCase();
+        var exceptionValue = exception.value;
+
         switch(exceptionType){
             case "hostname":
             case "basedomain":
             case "referrerhostname":
             case "referrerbasedomain":
-                
-                let domainMatch = (downloadHostname, referrerHostname, exceptionType, exceptionValue) => {
-                    let funcs = {
-                        "hostname" : (downloadHostname, referrerHostname, exceptionValue) => downloadHostname == exceptionValue.toLowerCase(),
-                        "basedomain" : (downloadHostname, referrerHostname, exceptionValue) => ('.' + downloadHostname).endsWith('.' + exceptionValue.toLowerCase()),
-                        "referrerhostname" : (downloadHostname, referrerHostname, exceptionValue) => referrerHostname == exceptionValue.toLowerCase(),
-                        "referrerbasedomain" : (downloadHostname, referrerHostname, exceptionValue) => ('.' + referrerHostname).endsWith('.' + exceptionValue.toLowerCase()),
-                    };
-
-                    return funcs[exceptionType](downloadHostname, referrerHostname, exceptionValue);
-                };
-
-                if(Array.isArray(exceptionValue)){
-                    return exceptionValue.some(x => domainMatch(downloadHostname, referrerHostname, exceptionType, x));
-                }
-
-                return domainMatch(downloadHostname, referrerHostname, exceptionType, exceptionValue);
-
+                return this.doesDomainMatch(exceptionType, exceptionValue, downloadItem);
             case "fileextensions":
                 return this.isExtensionInList(exceptionValue, Utils.getFileExtension(downloadItem.filename));
             default:
@@ -140,12 +143,14 @@ class configuration{
         var isJsDownload = Utils.isJsDownload(downloadItem);
 
         if(!this.isExtensionInList(rule.bannedExtensions, fileExtension)){
+            console.log("File extension didn't match rule");
             return false;
         }
         
         var ruleOrigin = rule.origin.toLowerCase();
 
         if((ruleOrigin == "local" && !isJsDownload) || ruleOrigin == 'server' && isJsDownload){
+            console.log("Rule origin didn't match");
             return false;
         }
 
@@ -155,6 +160,7 @@ class configuration{
         }
 
         if(rule.fileNameRegex && !this.doesFileNameRegexMatch(rule, downloadItem)){
+            console.log("fileNameRegex didn't match");
             return false;
         }
 
@@ -165,9 +171,19 @@ class configuration{
             var urlScheme = new URL(downloadItem.referringPage).protocol.slice(0, -1).toLowerCase(); // e.g. file, http, https instead of file:, http:, https:
 
             if(!ruleUrlScheme.includes(urlScheme)){
+                console.log("URL scheme didn't match");
                 return false;
             }
-        } 
+        }
+
+        var domainDoesntMatch = ["hostname", "basedomain", "referrerhostname", "referrerbasedomain"].some(domainMatchType => {
+            return rule[domainMatchType] && !this.doesDomainMatch(domainMatchType, rule[domainMatchType], downloadItem);
+        });
+
+        if(domainDoesntMatch){
+            console.log("Download didn't match domain filter");
+            return false;
+        }
 
         if(this.doesExceptionExist(rule, downloadItem)){
             console.log("exception found");

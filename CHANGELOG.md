@@ -1,5 +1,8 @@
 ## Change Log
 
+### 1.0.4
+* Rules now support hostname, basedomain, referrerhostname and referrerbasedomain filters.
+
 ### 1.0.3
 * The extension can now retrieve file metadata using a native messaging host. This allows metadata to be calculated in some situations which may otherwise not be possible. (e.g. Downloads smuggled via a document with a file:// origin, files downloaded from a web-server.)
 * Implemented cleanup of session storage when it is no longer needed.
