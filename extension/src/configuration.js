@@ -46,6 +46,10 @@ class configuration{
             return false;
         }
 
+        if(!["ruleaction", "metadata"].includes(this.getRuleResponsePriority(rule))){
+            return false;
+        }
+
         return true;
     }
 
@@ -54,7 +58,7 @@ class configuration{
         // If the download is HTML smuggled, use the referring page, otherwise use the file URL.
 
         var downloadHostname = new URL(Utils.isJsDownload(downloadItem) ? downloadItem.referringPage : downloadItem.finalUrl).hostname.toLowerCase();
-        var referrerHostname = new URL(downloadItem.referringPage).hostname.toLowerCase();
+        var referrerHostname = downloadItem.referringPage ? new URL(downloadItem.referringPage).hostname.toLowerCase() : "";
 
         let domainMatch = (downloadHostname, referrerHostname, matchType, matchValue) => {
             let funcs = {
@@ -192,6 +196,14 @@ class configuration{
 
         return true;
        
+    }
+
+    getRuleResponsePriority(rule){
+        if(!rule.responsePriority){
+            return "ruleaction"
+        }
+
+        return rule.responsePriority.toLowerCase();
     }
 
     getRuleAction(rule){

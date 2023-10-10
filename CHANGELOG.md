@@ -1,5 +1,8 @@
 ## Change Log
 
+## 1.0.5
+* Reverted blocking behavior to be consistent with versions 0.2.0 and prior. This means that downloads are, by default, now blocked as early as possible instead of waiting for the download to complete in order to give the Native Messaging Host change to obtain the file metadata. This change has been made because a user might have the chance to click a long-running download, meaning the item would automatically open when complete. This meant that the extension might not cancel and remove the download quickly enough to prevent it being opened. Rules now support the 'responsePriority' property which allows this behavior to be configured on a per-rule basis.
+
 ### 1.0.4
 * Rules now support hostname, basedomain, referrerhostname and referrerbasedomain filters.
 

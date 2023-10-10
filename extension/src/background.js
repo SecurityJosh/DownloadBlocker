@@ -179,7 +179,6 @@ async function clearSessionStorageData(downloadItem){
   }
 }
 
-
 /*
   This function can be called multiple times per download (e.g.)
     When the download is first created
@@ -189,21 +188,27 @@ async function clearSessionStorageData(downloadItem){
     When file inspection has been completed
 */
 async function processDownload(downloadItem){
+  if(downloadItem.state == "interrupted"){
+    return;
+  }
 
-  if(downloadItem.state !== "complete"){
+  let config = await initConfig();
+
+  if(!config){
+    console.log("Config wasn't loaded in time.");
+    return;
+  }
+
+  var matchedRule = config.getMatchedRule(downloadItem);
+
+  if(downloadItem.state == "in_progress" && matchedRule && config.getRuleResponsePriority(matchedRule) == "metadata"){
     return;
   }
 
   var filename = downloadItem.filename;
-
-  let config = await initConfig();
+  
   if(!filename){
     console.log("filename was null");
-    return;
-  }
-
-  if(!config){
-    console.log("Config wasn't loaded in time.");
     return;
   }
 
@@ -214,11 +219,10 @@ async function processDownload(downloadItem){
     return;
   }
 
-  // getCurrentUrl() uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
-
-  let urlAtCreationForDownload = await getStorageDataByKey("UrlAtCreationForDownload_" + downloadItem.id);
+  let urlAtCreationForDownload = await getStorageDataByKey("UrlAtCreationForDownload_" + downloadItem.id) ?? "";
   let nativeReferrer = downloadItem.referrer;
 
+  // getCurrentUrl() uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
   // The native referrer value doesn't always contain the full URL, but it is more reliable. We can balance the two by preferring the URL of the page the user was on when the download started if partial URL of the native referrer matches it.
   if(urlAtCreationForDownload.startsWith(downloadItem.referrer)){
     downloadItem.referrer = urlAtCreationForDownload;
@@ -229,7 +233,9 @@ async function processDownload(downloadItem){
 
   if(!downloadData){
     try{
+      console.log("Waiting for Native Messaging host");
       downloadData = await chrome.runtime.sendNativeMessage('securityjosh.download_blocker', { FilePath: downloadItem.filename});
+      console.log("Finished waiting for Native Messaging host");
       if(chrome.runtime.lastError){
         console.log(chrome.runtime.lastError.message);
       }
@@ -246,8 +252,6 @@ async function processDownload(downloadItem){
 
   console.log("Processing download with id: " + downloadItem.id + ", state is: " + downloadItem.state);
   console.log(structuredClone(downloadItem));
-
-  var matchedRule = config.getMatchedRule(downloadItem);
 
   if(!matchedRule){
     console.log("Download didn't match any rules")
@@ -284,7 +288,7 @@ async function processDownload(downloadItem){
     // If the ruleAction is not audit, i.e. it's block or notify, we need to send the user a notification
     var titleTemplateName = ruleAction == "block" ? "download_blocked_message_title" : "download_notify_message_title";
     var bodyTemplateName  = ruleAction == "block" ? "download_blocked_message_body"  : "download_notify_message_body";
-
+    console.log(downloadItem);
     var title = Utils.parseString(matchedRule.titleTemplate, downloadItem) || await chrome.i18n.getMessage(titleTemplateName);
     var message = Utils.parseString(matchedRule.messageTemplate, downloadItem) || await chrome.i18n.getMessage(bodyTemplateName, [downloadItem.filename, downloadItem.referringPage, downloadItem.finalUrl]);
     Utils.notifyUser(title, message);
@@ -299,30 +303,38 @@ chrome.downloads.onCreated.addListener(async function (downloadItem){
     if(chrome.runtime.lastError){
       console.log(chrome.runtime.lastError.message);
     }
-    console.log("Download created");
+    
+    if(downloadItem.endTime){
+      // Workaround for a chrome bug (https://bugs.chromium.org/p/chromium/issues/detail?id=1476069)
+      return;
+    }
+
     correlateDownloadWithMetaData(downloadItem);
     writeStorageData("UrlAtCreationForDownload_" + downloadItem.id, await getCurrentUrl());
+    processDownload(downloadItem);
   }
 );
 
-chrome.downloads.onChanged.addListener(function callback(downloadDelta){
-
-  if(chrome.runtime.lastError){
-    console.log(chrome.runtime.lastError.message);
-  }
-  if(downloadDelta.state){
-
-    chrome.downloads.search({'id' : downloadDelta.id}, function(items){
+chrome.downloads.onChanged.addListener(
+    function callback(downloadDelta){
       if(chrome.runtime.lastError){
         console.log(chrome.runtime.lastError.message);
       }
+      
+      if(downloadDelta.state){      
+        chrome.downloads.search({'id' : downloadDelta.id}, function(items){
+          if(chrome.runtime.lastError){
+            console.log(chrome.runtime.lastError.message);
+          }
 
-      if(items && items.length == 1){
-        processDownload(items[0]);
+          if(items && items.length == 1){
+            processDownload(items[0]);
+          }
+        });
+
       }
-    });
-  }
-});
+    }
+);
 
 try{
   const scriptId = "DownloadBlockerScript_" + Utils.generateGuid();

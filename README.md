@@ -10,6 +10,9 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+## 1.0.5
+* Reverted blocking behavior to be consistent with versions 0.2.0 and prior. This means that downloads are, by default, now blocked as early as possible instead of waiting for the download to complete in order to give the Native Messaging Host change to obtain the file metadata. This change has been made because a user might have the chance to click a long-running download, meaning the item would automatically open when complete. This meant that the extension might not cancel and remove the download quickly enough to prevent it being opened. Rules now support the 'responsePriority' property which allows this behavior to be configured on a per-rule basis.
+
 ### 1.0.4
 * Rules now support hostname, basedomain, referrerhostname and referrerbasedomain filters.
 
@@ -31,37 +34,6 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ### 1.0.0
 * Fixed bug which meant the the 'referrerbasedomain' exception type did not function as expected.
-
-### 0.2.2
-* Fixed bug which meant a download matching an audit rule with no alertConfig set would not generate a notification when blocked.
-* Fixed bug which meant the the 'referrerbasedomain' and 'referrerhostname' exception types did not function as expected.
-
-### 0.2.1
-* Updated minimum Chrome version in manifest to 102
-
-### 0.2.0
-* Migrated the extension to MV3.
-
-### 0.1.8
-* Smuggled files which are delivered via iframes with data: URLs are now content-inspected and will have their file-hash calculated.
-
-### 0.1.7
-* Fixed bug which meant that when exceptions of non-smuggled downloads were being checked, it was the referrer URL that was being checked instead of the download URL.
-* Added the 'referrerhostname' and 'referrerbasedomain' exception types in-case this behavior is desireable.
-
-### 0.1.6
-* The 'hostname' and 'basedomain' exception types now support arrays as well as strings.
-* Fixed bug which meant that only the first exception in a rule was actually checked.
-* Fixed issue which meant that base64 encoded data:// URLs would not be processed for SHA256 calculation or file inspection.
-* Rewrote how file metadata (SHA256, file inspection data) is handled which means that this information can trigger a rule action even if it is received after the file has finished downloading.
-* The {timestamp} placeholder now uses the time the download was initiated instead of the time the alert notification was sent.
-
-### 0.1.5
-* Fixed bug which meant an empty response from the server when sending an alert was handled as an error.
-* Added 'ruleName' config parameter to aid identifying which rule triggered an action.
-* Fixed parameters not being encoded properly when used in an alert URL.
-* Added the 'urlScheme' configuration filter to block downloads based on the URL scheme of the referring page. (e.g. file, http, https)
-* Fix for an oversight which may have caused the inferred URL to take precedence over the one provided by the webpage. (See 0.1.0)
 
 Full change log available [here](CHANGELOG.md)
 
@@ -97,7 +69,8 @@ The 'Config' value is a JSON object with the following schema:
                 "referrerhostname" : "example.com" | ["example1.com", "example2.com"],
                 "referrerbasedomain" : "example.com" | ["example1.com", "example2.com"],
                 "titleTemplate" : "Notification Title",
-                "messageTemplate" : "Notification message"
+                "messageTemplate" : "Notification message",
+                "responsePriority" : "ruleaction|metadata"
             }
         ],
 
@@ -196,6 +169,17 @@ Each rule object optionally supports exceptions via the **exceptions** array. Ea
 | referrerbasedomain | Hostname and any subdomain match (Referrer) | String or Array of strings   | "example1.com"<br>["example1.com", "example2.com"]                |
 
 When downloading a file via JS, hostname is the hostname of the page the download was initiated from. When downloading via a server, it is the hostname of the download URL.
+
+### Response Priority (Optional)
+
+Property name: responsePriority
+
+The **responsePriority** property allows you to configure what the extension should prioritise when a block rule is matched.
+
+| Priority  Type       | Description                                 |
+|----------------------|---------------------------------------------|
+| ruleaction (Default) | The extension will block the download as soon as possible, which means that the Native Messaging Host will not be able to obtain metadata, but means that the user shouldn't get the opportunity to open the file.                                                                |
+| metadata             | The extension will wait until the download has completed and attempt has been made to obtain metadata via the Native Messaging Host (if necessary) before blocking the download. Note that long-running downloads may let the user enable auto-open when complete, which could stop the extension from blocking it in time.         |
 
 ### titleTemplate and messageTemplate (Optional)
 
