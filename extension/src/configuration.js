@@ -172,7 +172,9 @@ class configuration{
 
             var ruleUrlScheme = rule.urlScheme.map(x => x.toLowerCase());
 
-            var urlScheme = new URL(downloadItem.referringPage).protocol.slice(0, -1).toLowerCase(); // e.g. file, http, https instead of file:, http:, https:
+            var downloadUrl = Utils.isJsDownload(downloadItem) ? downloadItem.referringPage : downloadItem.finalUrl;
+
+            var urlScheme = new URL(downloadUrl).protocol.slice(0, -1).toLowerCase(); // e.g. file, http, https instead of file:, http:, https:
 
             if(!ruleUrlScheme.includes(urlScheme)){
                 console.log("URL scheme didn't match");

@@ -198,6 +198,19 @@ async function processDownload(downloadItem){
     console.log("Config wasn't loaded in time.");
     return;
   }
+  
+  let downloadData = await correlateDownloadWithMetaData(downloadItem);
+  let urlAtCreationForDownload = await getStorageDataByKey("UrlAtCreationForDownload_" + downloadItem.id) ?? "";
+  let nativeReferrer = downloadItem.referrer;
+
+  // getCurrentUrl() uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
+  // The native referrer value doesn't always contain the full URL, but it is more reliable. We can balance the two by preferring the URL of the page the user was on when the download started if partial URL of the native referrer matches it.
+  if(urlAtCreationForDownload.startsWith(downloadItem.referrer)){
+    downloadItem.referrer = urlAtCreationForDownload;
+  }
+
+  downloadItem.referringPage = downloadData?.referringPage || downloadItem.referrer || urlAtCreationForDownload || await getCurrentUrl();
+  downloadItem.referrer = nativeReferrer;
 
   var matchedRule = config.getMatchedRule(downloadItem);
 
@@ -212,24 +225,12 @@ async function processDownload(downloadItem){
     return;
   }
 
-  let downloadData = await correlateDownloadWithMetaData(downloadItem);
+ 
 
   if(downloadData?.sha256 == "Pending" || (downloadData && downloadData?.fileInspectionData == null)){
     console.log(`[${downloadItem.filename}] Waiting for metadata, state is ` + downloadItem.state);
     return;
   }
-
-  let urlAtCreationForDownload = await getStorageDataByKey("UrlAtCreationForDownload_" + downloadItem.id) ?? "";
-  let nativeReferrer = downloadItem.referrer;
-
-  // getCurrentUrl() uses the currently active tab, which might not actually be the tab that initiated the download. Where possible, give priority to the URL provided by the content script.
-  // The native referrer value doesn't always contain the full URL, but it is more reliable. We can balance the two by preferring the URL of the page the user was on when the download started if partial URL of the native referrer matches it.
-  if(urlAtCreationForDownload.startsWith(downloadItem.referrer)){
-    downloadItem.referrer = urlAtCreationForDownload;
-  }
-
-  downloadItem.referringPage = downloadData?.referringPage || downloadItem.referrer || urlAtCreationForDownload || await getCurrentUrl();
-  downloadItem.referrer = nativeReferrer;
 
   if(!downloadData){
     try{
