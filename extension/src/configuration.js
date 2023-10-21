@@ -57,8 +57,8 @@ class configuration{
 
         // If the download is HTML smuggled, use the referring page, otherwise use the file URL.
 
-        var downloadHostname = new URL(Utils.isJsDownload(downloadItem) ? downloadItem.referringPage : downloadItem.finalUrl).hostname.toLowerCase();
-        var referrerHostname = downloadItem.referringPage ? new URL(downloadItem.referringPage).hostname.toLowerCase() : "";
+        var downloadHostname = Utils.createUrl(Utils.isJsDownload(downloadItem) ? downloadItem.referringPage || downloadItem.referrer : downloadItem.finalUrl)?.hostname?.toLowerCase() || "";
+        var referrerHostname = new URL(downloadItem.referringPage || downloadItem.referrer)?.hostname?.toLowerCase() || "";
 
         let domainMatch = (downloadHostname, referrerHostname, matchType, matchValue) => {
             let funcs = {
@@ -172,9 +172,13 @@ class configuration{
 
             var ruleUrlScheme = rule.urlScheme.map(x => x.toLowerCase());
 
-            var downloadUrl = Utils.isJsDownload(downloadItem) ? downloadItem.referringPage : downloadItem.finalUrl;
+            var downloadUrl = Utils.createUrl(Utils.isJsDownload(downloadItem) ? downloadItem.referringPage || downloadItem.referrer : downloadItem.finalUrl);
 
-            var urlScheme = new URL(downloadUrl).protocol.slice(0, -1).toLowerCase(); // e.g. file, http, https instead of file:, http:, https:
+            if(!downloadUrl){
+                return false;
+            }
+            
+            var urlScheme = downloadUrl.protocol.slice(0, -1).toLowerCase(); // e.g. file, http, https instead of file:, http:, https:
 
             if(!ruleUrlScheme.includes(urlScheme)){
                 console.log("URL scheme didn't match");

@@ -19,7 +19,7 @@ async function initConfig(){
 
       var title = await chrome.i18n.getMessage("config_error_title");
       var message = await chrome.i18n.getMessage("config_error_body");
-      Utils.notifyUser(title, message);
+      Utils.notifyUser(Utils.generateUuid(), title, message);
       
       return await configuration.loadDefaultConfig();
     }
@@ -118,6 +118,7 @@ chrome.runtime.onMessage.addListener(
     let downloadItem = await getDownloadFromGuid(guid);
 
     if(downloadItem){
+      console.log("reprocessing with new metadata");
       await processDownload(downloadItem);
     }
   }
@@ -198,7 +199,7 @@ async function processDownload(downloadItem){
     console.log("Config wasn't loaded in time.");
     return;
   }
-  
+
   let downloadData = await correlateDownloadWithMetaData(downloadItem);
   let urlAtCreationForDownload = await getStorageDataByKey("UrlAtCreationForDownload_" + downloadItem.id) ?? "";
   let nativeReferrer = downloadItem.referrer;
@@ -224,8 +225,6 @@ async function processDownload(downloadItem){
     console.log("filename was null");
     return;
   }
-
- 
 
   if(downloadData?.sha256 == "Pending" || (downloadData && downloadData?.fileInspectionData == null)){
     console.log(`[${downloadItem.filename}] Waiting for metadata, state is ` + downloadItem.state);
@@ -289,10 +288,10 @@ async function processDownload(downloadItem){
     // If the ruleAction is not audit, i.e. it's block or notify, we need to send the user a notification
     var titleTemplateName = ruleAction == "block" ? "download_blocked_message_title" : "download_notify_message_title";
     var bodyTemplateName  = ruleAction == "block" ? "download_blocked_message_body"  : "download_notify_message_body";
-    console.log(downloadItem);
+
     var title = Utils.parseString(matchedRule.titleTemplate, downloadItem) || await chrome.i18n.getMessage(titleTemplateName);
     var message = Utils.parseString(matchedRule.messageTemplate, downloadItem) || await chrome.i18n.getMessage(bodyTemplateName, [downloadItem.filename, downloadItem.referringPage, downloadItem.finalUrl]);
-    Utils.notifyUser(title, message);
+    Utils.notifyUser(Utils.generateUuid(), title, message);
   }
 
   await config.sendAlertMessage(downloadItem);
@@ -310,8 +309,8 @@ chrome.downloads.onCreated.addListener(async function (downloadItem){
       return;
     }
 
-    correlateDownloadWithMetaData(downloadItem);
-    writeStorageData("UrlAtCreationForDownload_" + downloadItem.id, await getCurrentUrl());
+    await correlateDownloadWithMetaData(downloadItem);
+    await writeStorageData("UrlAtCreationForDownload_" + downloadItem.id, await getCurrentUrl());
     processDownload(downloadItem);
   }
 );
@@ -321,8 +320,8 @@ chrome.downloads.onChanged.addListener(
       if(chrome.runtime.lastError){
         console.log(chrome.runtime.lastError.message);
       }
-      
-      if(downloadDelta.state){      
+
+      if(downloadDelta.state || downloadDelta.filename){      
         chrome.downloads.search({'id' : downloadDelta.id}, function(items){
           if(chrome.runtime.lastError){
             console.log(chrome.runtime.lastError.message);

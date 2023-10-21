@@ -7,7 +7,7 @@ var Utils = {
         return crypto.randomUUID(); // Minimum manifest version of 102 so this should be available.
     },
 
-    notifyUser(title, message){
+    notifyUser(messageId, title, message){
 
         var notificationOptions = {
           type: "basic",
@@ -17,7 +17,7 @@ var Utils = {
           message: message.length > 200 ? message.substr(0, 200) + "..." : message,
         };
         
-        chrome.notifications.create(Utils.generateUuid(), notificationOptions);
+        chrome.notifications.create(messageId, notificationOptions);
     },
 
     generateGuid(){
@@ -98,5 +98,13 @@ var Utils = {
         .replaceAll("{sha256}", downloadItem.sha256 ?? "")
         .replaceAll("{hostname}", this.Hostname)
         .replaceAll("{username}", this.Username);
+    },
+
+    createUrl(url){
+        try{
+            return new URL(url);
+        }catch{
+            return null;
+        }
     }
 }

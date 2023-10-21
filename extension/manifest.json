@@ -3,9 +3,9 @@
   "storage" : {
    "managed_schema" : "schema.json"  
   },
-  "version": "1.0.6",
+  "version": "1.0.7",
   "manifest_version": 3,
-  "description": "This browser extension was created to block HTML smuggling attacks. It can also block downloads of unwanted file types.",
+  "description": "Block HTML Smuggling attacks and other unwanted downloads. Designed for enterprise configuration.",
   "homepage_url": "https://github.com/SecurityJosh/DownloadBlocker",
   "icons": {
     "16": "icons/icon16.png", 

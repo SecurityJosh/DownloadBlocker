@@ -1,5 +1,9 @@
 ## Change Log
 
+## 1.0.7
+* Better error handling a download's referrer is unavailable
+* Make sure that non-smuggled downloads get an early cancellation opportunity as per 1.0.5.
+
 ## 1.0.6
 * Fix for https://github.com/SecurityJosh/DownloadBlocker/issues/7
 * The urlScheme filter would always look at the referring page, which makes sense for HTML Smuggled downloads but not for downloads from a web server. In this case the extension now takes the finalUrl value from the DownloadItem.

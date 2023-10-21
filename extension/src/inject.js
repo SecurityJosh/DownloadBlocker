@@ -6,8 +6,10 @@
     const URL = window.location.href;
     const _dispatchEvent = document.dispatchEvent.bind(document); // https://stackoverflow.com/a/10743608
 
-    const generateGuid = function () {
-        return crypto.randomUUID();
+    const _randomUUID = crypto.randomUUID.bind(crypto);
+
+    const generateGuid = function() {
+        return _randomUUID();
     };
 
     const processHash = function (guid, downloadUrl, initiatingPage, sha256, fileInspectionData) {
@@ -276,7 +278,7 @@
 
         fileReader.onloadend = function () {
             let fileInspection = inspectFile(fileReader.result);
-            processHash(guid, url, window.location.href, "Pending", fileInspection);
+            //processHash(guid, url, window.location.href, "Pending", fileInspection);
             crypto.subtle.digest("SHA-256", fileReader.result).then(digest => {
                 processHash(guid, url, window.location.href, digestToHex(digest), fileInspection);
             });
