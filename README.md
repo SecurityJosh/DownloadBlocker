@@ -10,8 +10,12 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+# 1.0.8
+* Fixed an oversight which meant that HTML Smuggled downloads from a HTTP origin were not inspected by the content script. (Native Messaging host unaffected)
+* Thanks to a fix in Chromium, HTML Smuggled downloads via a data: URI can now be inspected by the content script.
+
 ## 1.0.7
-* Better error handling a download's referrer is unavailable
+* Better error handling when a download's referrer is unavailable
 * Make sure that non-smuggled downloads get an early cancellation opportunity as per 1.0.5.
 
 ## 1.0.6

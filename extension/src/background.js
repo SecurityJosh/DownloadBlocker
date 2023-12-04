@@ -90,7 +90,12 @@ async function correlateDownloadWithMetaData(downloadItem){
   return null;
 }
 
-// Load initial config
+async function generateSha256(input){
+    let digest = await crypto.subtle.digest("SHA-256", input);
+    const hashArray = Array.from(new Uint8Array(digest));                     // convert buffer to byte array
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+    return hashHex;
+}
 
 // Listen for async event giving us a file's metadata, including SHA256 hash, referer and file inspection data.
 chrome.runtime.onMessage.addListener(
@@ -113,6 +118,10 @@ chrome.runtime.onMessage.addListener(
       request.fileInspectionData == existingData.fileInspectionData ?? request.fileInspectionData;      
     }
 
+    if(request.sha256 instanceof Array){
+      request.sha256 = await generateSha256(new Uint8Array(request.sha256));
+    }
+
     await writeStorageData("GUID_" + guid, request);
 
     let downloadItem = await getDownloadFromGuid(guid);
@@ -125,33 +134,23 @@ chrome.runtime.onMessage.addListener(
 );
 
 // Cancel a download
-function cancelDownloadInProgress(downloadItem){
-  chrome.downloads.cancel(downloadItem.id, function(){
-    if(chrome.runtime.lastError){
-      console.log(chrome.runtime.lastError.message);
-    }
-
-    chrome.downloads.erase({"id" : downloadItem.id}, function(){ 
-      if(chrome.runtime.lastError){
-        console.log(chrome.runtime.lastError.message);
-      }
-    });
-  });
+async function cancelDownloadInProgress(downloadItem){
+  try{
+    await chrome.downloads.cancel(downloadItem.id);
+    await chrome.downloads.erase({"id" : downloadItem.id});
+  }catch(ex){
+    console.log(ex);
+  }   
 }
 
 // Delete a download that has already finished
-function deleteSuccessfulDownload(downloadItem){
-  chrome.downloads.removeFile(downloadItem.id, function(){
-    if(chrome.runtime.lastError){
-      console.log(chrome.runtime.lastError.message);
-    }
-
-    chrome.downloads.erase({"id" : downloadItem.id}, function(){
-      if(chrome.runtime.lastError){
-        console.log(chrome.runtime.lastError.message);
-      }
-    });
-  });
+async function deleteSuccessfulDownload(downloadItem){
+  try{
+    await chrome.downloads.removeFile(downloadItem.id);
+    await chrome.downloads.erase({"id" : downloadItem.id});
+  }catch(ex){
+    console.log(ex);
+  }
 }
 
 function abortDownload(downloadItem){    
@@ -228,6 +227,11 @@ async function processDownload(downloadItem){
 
   if(downloadData?.sha256 == "Pending" || (downloadData && downloadData?.fileInspectionData == null)){
     console.log(`[${downloadItem.filename}] Waiting for metadata, state is ` + downloadItem.state);
+    return;
+  }
+
+  if(downloadItem.state == "in_progress" && downloadItem.fileSize && downloadItem.totalBytes && downloadItem.fileSize == downloadItem.totalBytes && downloadItem.totalBytes > 0){
+    // Download has actually already finished, so to prevent a race condition here we will yield to the event about to be dispatched when the download finishes.
     return;
   }
 

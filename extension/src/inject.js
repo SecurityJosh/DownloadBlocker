@@ -6,17 +6,26 @@
     const URL = window.location.href;
     const _dispatchEvent = document.dispatchEvent.bind(document); // https://stackoverflow.com/a/10743608
 
-    const _randomUUID = crypto.randomUUID.bind(crypto);
+    const _randomUUID = crypto.randomUUID?.bind(crypto);
 
     const generateGuid = function() {
-        return _randomUUID();
-    };
+        if(_randomUUID){
+            return _randomUUID();
+        }
+        // https://stackoverflow.com/a/2117523
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/\d/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    }
 
     const processHash = function (guid, downloadUrl, initiatingPage, sha256, fileInspectionData) {
         if (guid == null) {
             return;
         }
-
+        // In insecure contexts, we don't have access to the functions required to perform SHA256 calculation, so we need to pass the raw data to our background script to be able to perform the calculation there.
+        // ArrayBuffers cannot be JSON stringified, (which chrome.runtime.sendMessage relies on) so we need to convert it into something that can be stringified
+        if(sha256 instanceof ArrayBuffer){
+            sha256 = [... new Uint8Array(sha256)]
+        }
+        
         let eventName = eventId;
         let eventData = { guid: guid, id: downloadUrl, sha256: sha256, initiatingPage: initiatingPage, fileInspectionData: fileInspectionData };
 
@@ -54,7 +63,7 @@
         }
     }
 
-    const processUri = function (url, downloadUrl) {
+    const processUri = async function (url, downloadUrl) {
 
         if (!url) {
             return false;
@@ -74,9 +83,9 @@
 
         processHash(guid, url, downloadUrl, "Pending");
 
-        crypto.subtle.digest("SHA-256", encoded).then(digest => {
-            processHash(guid, url, downloadUrl, digestToHex(digest), inspectFile(encoded));
-        });
+        let sha256 = await generateSha256(encoded);
+
+        processHash(guid, url, downloadUrl, sha256, inspectFile(encoded));
     }
 
     const parseDataUri = function (uri) {
@@ -90,7 +99,7 @@
             if (results[3] != null) { // results[3] == ;base64
                 return base64ToArrayBuffer(decodeURIComponent(downloadData));
             } else {
-                return new TextEncoder().encode(decodeURIComponent(downloadData)); // Blindly assume that the downloadData is urlEncoded?
+                return (new TextEncoder().encode(decodeURIComponent(downloadData))).buffer; // Blindly assume that the downloadData is urlEncoded?
             }
         }
     }
@@ -238,7 +247,14 @@
         _dispatchEvent(event);
     }
 
-    window.addEventListener("message", function (x) {
+    window.addEventListener("message", async function (x) {
+        
+        if(x.data.initiatingPage?.toLowerCase().startsWith("data:")){
+            x.data.initiatingPage = window.location.href;
+        }
+
+        x.data.sha256 = await generateSha256(x.data.sha256);
+
         processHash(x.data.guid, x.data.id, x.data.initiatingPage, x.data.sha256, x.data.fileInspectionData);
     });
 
@@ -276,15 +292,20 @@
 
         processHash(guid, url, window.location.href, "Pending");
 
-        fileReader.onloadend = function () {
+        fileReader.onloadend = async function () {
             let fileInspection = inspectFile(fileReader.result);
-            //processHash(guid, url, window.location.href, "Pending", fileInspection);
-            crypto.subtle.digest("SHA-256", fileReader.result).then(digest => {
-                processHash(guid, url, window.location.href, digestToHex(digest), fileInspection);
-            });
+            processHash(guid, url, window.location.href, await generateSha256(fileReader.result), fileInspection);
         }
 
         return url;
+    }
+
+    async function generateSha256(input){
+        if(crypto.subtle && input instanceof ArrayBuffer){
+            let digest = await crypto.subtle.digest("SHA-256", input);
+            return digestToHex(digest);
+        }
+        return input;
     }
 
 
