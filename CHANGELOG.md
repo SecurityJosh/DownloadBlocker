@@ -1,6 +1,6 @@
 ## Change Log
 
-# 1.0.8
+## 1.0.8
 * Fixed an oversight which meant that HTML Smuggled downloads from a HTTP origin were not inspected by the content script. (Native Messaging host unaffected)
 * Thanks to a fix in Chromium, HTML Smuggled downloads via a data: URI can now be inspected by the content script.
 
