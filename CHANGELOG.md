@@ -1,5 +1,11 @@
 ## Change Log
 
+## 1.0.9
+* Added 'matchFileNamesInZip' rule property which applies the bannedExtensions and fileNameRegex configuration to file names found within a zip file.
+* Added the {actionResult} placeholder.
+* Fixed issue which meant that downloads set to 'Open' in Edge would never be blocked before the user could open the file.
+* Hotfix for a bug in older versions (< 1.3.0) of the Native Messaging Host.
+
 ## 1.0.8
 * Fixed an oversight which meant that HTML Smuggled downloads from a HTTP origin were not inspected by the content script. (Native Messaging host unaffected)
 * Thanks to a fix in Chromium, HTML Smuggled downloads via a data: URI can now be inspected by the content script.

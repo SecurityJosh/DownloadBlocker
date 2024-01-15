@@ -138,8 +138,10 @@ async function cancelDownloadInProgress(downloadItem){
   try{
     await chrome.downloads.cancel(downloadItem.id);
     await chrome.downloads.erase({"id" : downloadItem.id});
+    return true;
   }catch(ex){
     console.log(ex);
+    return false;
   }   
 }
 
@@ -148,22 +150,24 @@ async function deleteSuccessfulDownload(downloadItem){
   try{
     await chrome.downloads.removeFile(downloadItem.id);
     await chrome.downloads.erase({"id" : downloadItem.id});
+    return true;
   }catch(ex){
     console.log(ex);
+    return false;
   }
 }
 
-function abortDownload(downloadItem){    
+async function abortDownload(downloadItem){    
 
   if(downloadItem.state == "interrupted"){
     console.log("state was interrupted");
-    return;
+    return false;
   }
 
   if(downloadItem.state == "complete"){
-    deleteSuccessfulDownload(downloadItem);    
+    return await deleteSuccessfulDownload(downloadItem);    
   }else{
-    cancelDownloadInProgress(downloadItem);
+    return await cancelDownloadInProgress(downloadItem);
   }
 }
 
@@ -230,12 +234,14 @@ async function processDownload(downloadItem){
     return;
   }
 
-  if(downloadItem.state == "in_progress" && downloadItem.fileSize && downloadItem.totalBytes && downloadItem.fileSize == downloadItem.totalBytes && downloadItem.totalBytes > 0){
+  let isBlockPrioritised = matchedRule && config.getRuleResponsePriority(matchedRule) == "ruleaction" && config.getRuleAction(matchedRule) == "block";
+
+  if(downloadItem.state == "in_progress" && downloadItem.fileSize && downloadItem.totalBytes && downloadItem.fileSize == downloadItem.totalBytes && downloadItem.totalBytes > 0 && !isBlockPrioritised){
     // Download has actually already finished, so to prevent a race condition here we will yield to the event about to be dispatched when the download finishes.
     return;
   }
 
-  if(!downloadData){
+  if(!downloadData && !isBlockPrioritised){
     try{
       console.log("Waiting for Native Messaging host");
       downloadData = await chrome.runtime.sendNativeMessage('securityjosh.download_blocker', { FilePath: downloadItem.filename});
@@ -254,8 +260,15 @@ async function processDownload(downloadItem){
     downloadItem.fileInspectionData = downloadData.fileInspectionData;
   }
 
+  // Workaround for a bug in the Native Messaging Host between 1.1.0 and 1.2.0 which means that zipFileNames are accidentally returned inside of a double array
+  if(downloadItem.fileInspectionData?.zipFileNames?.[0] instanceof Array){
+    downloadItem.fileInspectionData.zipFileNames = downloadItem.fileInspectionData?.zipFileNames?.[0];
+  }
+
   console.log("Processing download with id: " + downloadItem.id + ", state is: " + downloadItem.state);
   console.log(structuredClone(downloadItem));
+
+  matchedRule = config.getMatchedRule(downloadItem);
 
   if(!matchedRule){
     console.log("Download didn't match any rules")
@@ -282,12 +295,13 @@ async function processDownload(downloadItem){
   if(shouldBlockDownload){
 
     console.log("Action not set to audit or notify, blocking download");
-    abortDownload(downloadItem);
-
+    let actionResult = (await abortDownload(downloadItem)) ? "Successful" : "Unsuccessful";
+    downloadItem.actionResult = actionResult;
   }else{
     console.log(`Rule action is set to ${ruleAction}, download won't be blocked.`);
   }
 
+  
   if(ruleAction != "audit"){
     // If the ruleAction is not audit, i.e. it's block or notify, we need to send the user a notification
     var titleTemplateName = ruleAction == "block" ? "download_blocked_message_title" : "download_notify_message_title";

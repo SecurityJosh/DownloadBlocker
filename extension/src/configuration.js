@@ -120,7 +120,7 @@ class configuration{
 
         try{
             var regex = new RegExp(rule.fileNameRegex);
-            return regex.test(downloadItem.filename);
+            return regex.test(downloadItem.filename) || (rule.matchFileNamesInZip && Array.from(downloadItem.fileInspectionData?.zipFileNames || []).some(x=> regex.test(x)));
         }catch{
             console.log(`Failed to compile regex '${rule.fileNameRegex}'`);
             return false;
@@ -146,7 +146,7 @@ class configuration{
         
         var isJsDownload = Utils.isJsDownload(downloadItem);
 
-        if(!this.isExtensionInList(rule.bannedExtensions, fileExtension)){
+        if(!(this.isExtensionInList(rule.bannedExtensions, fileExtension) || (rule.matchFileNamesInZip && Array.from(downloadItem.fileInspectionData?.zipFileNames || []).some(x=> this.isExtensionInList(rule.bannedExtensions, Utils.getFileExtension(x)))))){
             console.log("File extension didn't match rule");
             return false;
         }

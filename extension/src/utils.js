@@ -68,9 +68,9 @@ var Utils = {
         .replaceAll("{eventTimestamp}", Date.now())
         .replaceAll("{formattedEventTimestamp}", new Date().toUTCString())
         .replaceAll("{sha256}", downloadItem.sha256 ?? "")
+        .replaceAll("{actionResult}", downloadItem.actionResult ?? "")
         .replaceAll("{hostname}", this.Hostname)
         .replaceAll("{username}", this.Username);
-
     },
 
     parseTemplate(postData, downloadItem){
@@ -96,6 +96,7 @@ var Utils = {
         .replaceAll("{eventTimestamp}", Date.now())
         .replaceAll("{formattedEventTimestamp}", new Date().toUTCString())
         .replaceAll("{sha256}", downloadItem.sha256 ?? "")
+        .replaceAll("{actionResult}", downloadItem.actionResult ?? "")
         .replaceAll("{hostname}", this.Hostname)
         .replaceAll("{username}", this.Username);
     },

@@ -10,6 +10,12 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+## 1.0.9
+* Added 'matchFileNamesInZip' rule property which applies the bannedExtensions and fileNameRegex configuration to file names found within a zip file.
+* Added the {actionResult} placeholder.
+* Fixed issue which meant that downloads set to 'Open' in Edge would never be blocked before the user could open the file.
+* Hotfix for a bug in older versions (< 1.3.0) of the Native Messaging Host.
+
 ## 1.0.8
 * Fixed an oversight which meant that HTML Smuggled downloads from a HTTP origin were not inspected by the content script. (Native Messaging host unaffected)
 * Thanks to a fix in Chromium, HTML Smuggled downloads via a data: URI can now be inspected by the content script.
@@ -63,12 +69,13 @@ The 'Config' value is a JSON object with the following schema:
     {
         "rules" : [
             {
-                ruleName : ""
+                "ruleName" : ""
                 "bannedExtensions" : [],
                 "urlScheme" : ["file", "http", "https", "etc."],
                 "fileNameRegex" : "",
+                "matchFileNamesInZip" : [true|false]
                 "origin" : "local|server|any",
-                fileInspection: {"InspectionType": [true|false]},
+                "fileInspection": {"InspectionType": [true|false]},
                 "exceptions" : [
                     {
                         "type" : "hostname|basedomain|referrerhostname|referrerbasedomain|fileextensions",
@@ -125,12 +132,17 @@ This property is intended to used in combination with an origin = Local filter. 
 
 This can be used, for example, to block all HTML Smuggled downloads which originate from a local webpage on the user's computer. (e.g. via an email attachment) Since Chrome can't, by default, run content scripts in these local webpages, a rule which blocks files based on content inspection won't work for these files. This property allows you to blanket ban these files which can't be inspected.
 
-
 ### fileNameRegex (Optional)
 
 Property name: fileNameRegex
 
 The fileNameRegex property allows you to filter for file names that match a given regex pattern. The pattern is tested against the whole file name, including extension. Be aware that you will need to double-escape any backslashes in your regex string so that the JSON remains valid.
+
+### matchFileNamesInZip (Optional)
+
+Property name: matchFileNamesInZip (Boolean)
+
+If set to true, file extension and regex filtering will also apply to files found within a .zip file.
 
 ### Domain Filters
 
@@ -224,6 +236,7 @@ Both the URL and the values contained in the postData property can contain the f
 * {action} (Rule action: block, audit or notify)
 * {sha256} (Only for HTML Smuggled downloads)
 * {fileInspection} (Only for HTML Smuggled downloads)
+* {actionResult} (Successful / Unsuccessful depending on whether the attempt to perform the rule action resulted in an exception being thrown. For example, if a block action returns unsuccessful, it indicates that the file may have been opened before by the user before the extension could block the download, and now another process has a write-lock on the file.)
 * {hostname} *
 * {username} *
 
