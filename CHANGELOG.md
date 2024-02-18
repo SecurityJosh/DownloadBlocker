@@ -1,5 +1,8 @@
 ## Change Log
 
+## 1.1.0
+* fileInspectionData now contains a new key, 'zipContainsEncryptedFiles', which is a boolean value indicating if a .zip file contains any files which are encrypted.
+
 ## 1.0.9
 * Added 'matchFileNamesInZip' rule property which applies the bannedExtensions and fileNameRegex configuration to file names found within a zip file.
 * Added the {actionResult} placeholder.

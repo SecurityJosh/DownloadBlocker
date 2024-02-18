@@ -43,7 +43,8 @@
     const inspectFile = function (data) {
         return {
             "macros": doesFileHaveMacros(data),
-            "zipFileNames": extractZipFileNames(data)
+            "zipFileNames": extractZipFileNames(data),
+            "zipContainsEncryptedFiles" : Array.from(areAnyZipFilesEncrypted(data)).some(x => x)
         };
     }
 
@@ -115,6 +116,17 @@
         }
     }
 
+    const areAnyZipFilesEncrypted = function (fileBytes) {
+        const ZIP_HEADER = [0x50, 0x4b];
+        const START_OF_CENTRAL_DIRECTORY = [0x50, 0x4b, 0x01, 0x02];
+
+        try {
+            return byteSearch(fileBytes, ZIP_HEADER, START_OF_CENTRAL_DIRECTORY, isFileEncrypted) || false;
+        } catch {
+            return false;
+        }
+    }
+
     const digestToHex = function (digest) {
         const hashArray = Array.from(new Uint8Array(digest));                     // convert buffer to byte array
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
@@ -183,6 +195,21 @@
         let fileName = String.fromCharCode.apply(null, fileNameBytes);
 
         return fileName;
+    }
+
+    const isFileEncrypted = function (fileOffset, fileBytes) {
+        let startOfRecordIndex = fileOffset;
+        const GENERAL_PURPOSE_FLAGS_OFFSET = 8;
+        const GENERAL_PURPOSE_FLAGS_LENGTH = 2;
+
+        if (fileBytes.length <= startOfRecordIndex + GENERAL_PURPOSE_FLAGS_OFFSET + GENERAL_PURPOSE_FLAGS_LENGTH) {
+            return false;
+        }
+
+        let generalPurpleFlagsStartByte = startOfRecordIndex + GENERAL_PURPOSE_FLAGS_OFFSET;
+        let generalPurpleFlags = (fileBytes.slice(generalPurpleFlagsStartByte, generalPurpleFlagsStartByte + 1));
+        let isEncrypted = generalPurpleFlags & 0x1;
+        return isEncrypted;
     }
 
     const doesFileHaveExcel4Macros = function (fileBytes) {

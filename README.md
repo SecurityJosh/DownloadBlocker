@@ -10,6 +10,9 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+## 1.1.0
+* fileInspectionData now contains a new key, 'zipContainsEncryptedFiles', which is a boolean value indicating if a .zip file contains any files which are encrypted.
+
 ## 1.0.9
 * Added 'matchFileNamesInZip' rule property which applies the bannedExtensions and fileNameRegex configuration to file names found within a zip file.
 * Added the {actionResult} placeholder.
@@ -30,28 +33,6 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## 1.0.5
 * Reverted blocking behavior to be consistent with versions 0.2.0 and prior. This means that downloads are, by default, now blocked as early as possible instead of waiting for the download to complete in order to give the Native Messaging Host change to obtain the file metadata. This change has been made because a user might have the chance to click a long-running download, meaning the item would automatically open when complete. This meant that the extension might not cancel and remove the download quickly enough to prevent it being opened. Rules now support the 'responsePriority' property which allows this behavior to be configured on a per-rule basis.
-
-### 1.0.4
-* Rules now support hostname, basedomain, referrerhostname and referrerbasedomain filters.
-
-### 1.0.3
-* The extension can now retrieve file metadata using a native messaging host. This allows metadata to be calculated in some situations which may otherwise not be possible. (e.g. Downloads smuggled via a document with a file:// origin, files downloaded from a web-server.)
-* Implemented cleanup of session storage when it is no longer needed.
-* Changes to how the referrer URL is inferred which will hopefully be more accurate.
-* Fixed an issue with the injected content-script which could result in the webpage behaving unexpectedly in a specific situation.
-
-### 1.0.2
-* Metadata support added for downloads initiated from inside an iFrame.
-* fileInspectionData now contains a new key, 'zipFileNames', which contains an array of all of the filenames contained within a .zip file.
-* Fixed a bug which meant that the calculated SHA256 for base64-encoded data URIs could be incorrect.
-
-### 1.0.1
-* Added {formattedTimestamp}, {eventTimestamp} and {formattedEventTimestamp} placeholders.
-* Added {hostname} and {username} placeholders (Extra configuration required)
-* If a managed configuration fails to parse, a user notification will now be displayed and the extension will fall back to the default config.
-
-### 1.0.0
-* Fixed bug which meant the the 'referrerbasedomain' exception type did not function as expected.
 
 Full change log available [here](CHANGELOG.md)
 
@@ -168,14 +149,15 @@ If multiple rules are matched, the first block rule takes precedence. An audit o
 
 Property name: fileInspection
 
-For files which are created using HTML Smuggling, the extension can inspect them for certain properties. Additionally, rules can be configured to look for these properties in smugged files.
+Files which are HTML Smuggled (Or where the Native Messaging Host is installed) can be inspected for certain properties. Additionally, rules can be configured to match on the existence of these properties.
 
 If multiple inspection types are specified, all values must match for the rule to match.
 
-| Inspection Type | Description                                                                                              | Example 'fileInspection' config value  |
-|-----------------|----------------------------------------------------------------------------------------------------------|----------------------------------------|
-| macros          | True if the file is a binary office file (i.e. .docm .ppt, .xls) and contains macros or Excel 4.0 macros.| {"macros" : "true"}                    |
-| zipFileNames    | An array of all of the filenames contained within the zip file. Empty if the file is not a zip file.     | N/A                                    |
+| Inspection Type           | Description                                                                                              | Example 'fileInspection' config value  |
+|---------------------------|----------------------------------------------------------------------------------------------------------|----------------------------------------|
+| macros                    | True if the file is a binary office file (i.e. .docm .ppt, .xls) and contains macros or Excel 4.0 macros.| {"macros" : "true"}                    |
+| zipFileNames              | An array of all of the filenames contained within the zip file. Empty if the file is not a zip file.     | N/A                                    |
+| zipContainsEncryptedFiles | True if the file is a zip and it contains at least one encrypted file. False otherwise.                  | {"zipContainsEncryptedFiles" : "true"} |
 
 
 ### Exceptions (Optional)
@@ -234,8 +216,8 @@ Both the URL and the values contained in the postData property can contain the f
 * {ruleName}
 * {state} (Download state)
 * {action} (Rule action: block, audit or notify)
-* {sha256} (Only for HTML Smuggled downloads)
-* {fileInspection} (Only for HTML Smuggled downloads)
+* {sha256} (Only for HTML Smuggled downloads or where the Native Messaging host is installed)
+* {fileInspection} (Only for HTML Smuggled downloads or where the Native Messaging host is installed)
 * {actionResult} (Successful / Unsuccessful depending on whether the attempt to perform the rule action resulted in an exception being thrown. For example, if a block action returns unsuccessful, it indicates that the file may have been opened before by the user before the extension could block the download, and now another process has a write-lock on the file.)
 * {hostname} *
 * {username} *
