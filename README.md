@@ -10,6 +10,9 @@ HTML smuggling is essentially a technique for bypassing web-proxies / firewalls 
 
 ## Change Log
 
+## 1.1.1
+* Fix for https://github.com/SecurityJosh/DownloadBlocker/issues/7 kindly provided by https://github.com/z3r0privacy.
+
 ## 1.1.0
 * fileInspectionData now contains a new key, 'zipContainsEncryptedFiles', which is a boolean value indicating if a .zip file contains any files which are encrypted.
 
