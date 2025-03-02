@@ -271,7 +271,7 @@
         if (event && event.type && event.type === eventId) {
             return;
         }
-        _dispatchEvent(event);
+        return _dispatchEvent(event);
     }
 
     window.addEventListener("message", async function (x) {
